@@ -19,7 +19,7 @@ setup(
         'tqdm',
         'opencv-python',
         'trimesh',
-        'suction_nms',
+        # 'suction_nms',
         'point_cloud_utils'
     ]
 )

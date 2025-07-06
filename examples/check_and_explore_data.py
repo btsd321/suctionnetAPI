@@ -5,52 +5,52 @@ if __name__ == "__main__":
     camera = 'realsense'
     suctionnet = SuctionNet(root=dataset_root, camera=camera)
 
-    # check data completeness
+    # 检查数据集的完整性，确保所有必要的数据文件都存在
     suctionnet.check_data_completeness()
     
-    # we provide functions to explore the dataset
-    # get a list of all the scenes that contain specific objects
-    object_ids = [0, 1, 2]  # specify objects as you want
+    # 提供探索数据集的相关函数
+    # 获取包含指定物体的所有场景ID列表
+    object_ids = [0, 1, 2]  # 指定你感兴趣的物体ID
     scene_ids = suctionnet.getSceneIds(objIds=object_ids)
 
-    # get a list of objects in specific scenes
-    scene_ids = [0, 1, 2]   # specify scenes as you want
+    # 获取指定场景中包含的所有物体ID列表
+    scene_ids = [0, 1, 2]   # 指定你感兴趣的场景ID
     object_ids = suctionnet.getObjIds(scene_ids)
 
-    # we also provide functions to load data from the dataset
-    # get object models (in the form of open3d.geometry.PointCloud)
-    object_ids = [0, 1, 2]  # specify objects as you want
+    # 还提供了从数据集中加载数据的相关函数
+    # 获取物体模型（返回open3d.geometry.PointCloud格式的点云模型列表）
+    object_ids = [0, 1, 2]  # 指定你感兴趣的物体ID
     model_list = suctionnet.loadObjModels(object_ids)
 
-    # get object models (in the form of rimesh.Trimesh)
-    object_ids = [0, 1, 2]  # specify objects as you want
+    # 获取物体模型（返回trimesh.Trimesh格式的三维网格模型列表）
+    object_ids = [0, 1, 2]  # 指定你感兴趣的物体ID
     model_list = suctionnet.loadObjTrimesh(object_ids)
 
-    # get a dict of seal labels of specific objects
-    object_ids = [0, 1, 2]  # specify objects as you want
+    # 获取指定物体的密封标签（返回字典，key为物体ID，value为标签）
+    object_ids = [0, 1, 2]  # 指定你感兴趣的物体ID
     seal_labels = suctionnet.loadSealLabels(object_ids)
 
-    # get a dict of wrench labels of specific scenes
-    scene_ids = [0, 1, 2]   # specify scenes as you want
+    # 获取指定场景的扭矩标签（返回字典，key为场景ID，value为标签）
+    scene_ids = [0, 1, 2]   # 指定你感兴趣的场景ID
     wrench_labels = suctionnet.loadWrenchLabels(scene_ids)
 
-    # get a dict of collision labels of specific scenes
-    scene_ids = [0, 1, 2]   # specify scenes as you want
+    # 获取指定场景的碰撞标签（返回字典，key为场景ID，value为标签）
+    scene_ids = [0, 1, 2]   # 指定你感兴趣的场景ID
     colli_labels = suctionnet.loadCollisionLabels(scene_ids)
 
-    # get images
-    # color image in RGB form
+    # 获取图像数据
+    # 获取RGB格式的彩色图像
     rgb_img = suctionnet.loadRGB(sceneId=0, camera='realsense', annId=0)
-    # color image in BGR form
+    # 获取BGR格式的彩色图像
     bgr_img = suctionnet.loadBGR(sceneId=0, camera='realsense', annId=0)
-    # depth image
+    # 获取深度图像
     depth_img = suctionnet.loadDepth(sceneId=0, camera='realsense', annId=0)
-    # mask image
+    # 获取掩码图像
     mask_img = suctionnet.loadMask(sceneId=0, camera='realsense', annId=0)
 
-    # get point clouds and corresponding colors from depth and color images
-    # format can be open3d or numpy
+    # 从深度图和彩色图中获取点云及其对应颜色
+    # 返回格式可以是open3d或numpy
     points, colors = suctionnet.loadScenePointCloud(sceneId=0, camera='realsense', annId=0, align=False, format = 'open3d')
 
-    # get open3d point cloud models of a scene
+    # 获取场景的open3d点云模型列表
     model_list = suctionnet.loadSceneModel(sceneId=0, camera ='kinect', annId = 0, align = False)

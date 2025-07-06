@@ -2,3 +2,6 @@ __pycache__
 .vscode
 test_api.py
 modify_file_structure.sh
+
+*.egg-info
+build
