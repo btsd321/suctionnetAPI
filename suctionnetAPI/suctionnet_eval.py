@@ -1,7 +1,5 @@
-
 __author__ = 'hwcao'
 __version__ = '1.0'
-
 
 import numpy as np
 import os
@@ -12,18 +10,14 @@ from .utils.eval_utils import get_scene_name, create_table_points, parse_posevec
      transform_points, voxel_sample_points, eval_suction
 from .utils.xmlhandler import xmlReader
 
-
 class SuctionNetEval(SuctionNet):
     '''
-    Class for evaluation on SuctionNet dataset.
-    
-    **Input:**
-    
-    - root: string of root path for the dataset.
-    
-    - camera: string of type of the camera.
-    
-    - split: string of the date split.
+    SuctionNet数据集评估类。
+
+    输入参数:
+    - root: 数据集根目录路径（字符串）
+    - camera: 相机类型（字符串）
+    - split: 数据集划分（字符串）
     '''
 
     def __init__(self, root, camera, split='all'):
@@ -31,19 +25,16 @@ class SuctionNetEval(SuctionNet):
 
     def get_scene_models(self, scene_id, ann_id):
         '''
-        **Input:**
-        
-        - scene_id: int of the scen index.
-        
-        - ann_id: int of the annotation index.
-        
-        **Output:**
+        获取指定场景和标注下的所有物体点云模型及稠密点云。
 
-        - model_list: list of model point clouds
+        输入参数:
+        - scene_id: 场景编号（int）
+        - ann_id: 标注编号（int）
 
-        - dense_model_list: list of dense model point clouds created by the create_dense_point_cloud() fuction in suctionnetAPI
-
-        - obj_list: list of object indexes
+        输出:
+        - model_list: 普通点云列表
+        - dense_model_list: 稠密点云列表（通过create_dense_point_cloud生成）
+        - obj_list: 物体编号列表
         '''
         model_dir = os.path.join(self.root, 'models')
         scene_reader = xmlReader(os.path.join(self.root, 'scenes', get_scene_name(scene_id), self.camera, 'annotations', '%04d.xml' % (ann_id,)))
@@ -70,21 +61,17 @@ class SuctionNetEval(SuctionNet):
 
     def get_model_poses(self, scene_id, ann_id):
         '''
-        **Input:**
-        
-        - scene_id: int of the scen index.
-        
-        - ann_id: int of the annotation index.
-        
-        **Output:**
-        
-        - obj_list: list of int of object index.
-        
-        - pose_list: list of 4x4 matrices of object poses.
-        
-        - camera_pose: 4x4 matrix of the camera pose relative to the first frame.
-        
-        - align mat: 4x4 matrix of camera relative to the table.
+        获取指定场景和标注下所有物体的位姿信息。
+
+        输入参数:
+        - scene_id: 场景编号（int）
+        - ann_id: 标注编号（int）
+
+        输出:
+        - obj_list: 物体编号列表
+        - pose_list: 物体4x4位姿矩阵列表
+        - camera_pose: 当前帧相机相对于第一帧的4x4位姿矩阵
+        - align_mat: 相机相对于桌面的4x4变换矩阵
         '''
         scene_dir = os.path.join(self.root, 'scenes')
         camera_poses_path = os.path.join(self.root, 'scenes', get_scene_name(scene_id), self.camera, 'camera_poses.npy')
@@ -104,17 +91,15 @@ class SuctionNetEval(SuctionNet):
     
     def eval_scene(self, scene_id, split, dump_folder):
         '''
-        **Input:**
-        
-        - scene_id: int of the scene index.
-        
-        - split: string of the data split
-        
-        - dump_folder: string of the folder that saves the dumped npy files.
-        
-        **Output:**
-        
-        - scene_accuracy: np.array of shape (256, 50, 6) of the accuracy tensor.
+        评估单个场景的吸取点准确率。
+
+        输入参数:
+        - scene_id: 场景编号（int）
+        - split: 数据集划分（字符串）
+        - dump_folder: 吸取点预测结果保存目录（字符串）
+
+        输出:
+        - scene_accuracy: 形状为(256, 50, 6)的准确率张量
         '''
         threshold_list = [0.2, 0.4, 0.6, 0.8]
         TOP_K = 50
@@ -129,17 +114,16 @@ class SuctionNetEval(SuctionNet):
             
         scene_accuracy = []
         for ann_id in range(256):
-            
+            # 读取吸取点预测结果
             suction_group = SuctionGroup().from_npy(os.path.join(dump_folder, split, 'scene_%04d'%scene_id, self.camera, 'suction', '%04d.npz' % (ann_id)))
             
             _, pose_list, camera_pose, align_mat = self.get_model_poses(scene_id, ann_id)
             table_trans = transform_points(table, np.linalg.inv(np.matmul(align_mat, camera_pose)))
 
-            suction_list, smoothness_score_list, wrench_score_list, collision_mask_list = eval_suction(suction_group, model_sampled_list, 
-                                                                                                dense_model_list, pose_list, align_mat, 
-                                                                                                camera_pose, table=table_trans)
-            # concat into scene level
-            # remove empty
+            # 评估吸取点的平滑性、抗扭矩性、碰撞等
+            suction_list, smoothness_score_list, wrench_score_list, collision_mask_list = eval_suction(
+                suction_group, model_sampled_list, dense_model_list, pose_list, align_mat, camera_pose, table=table_trans)
+            # 合并所有物体的吸取点
             suction_list = [x for x in suction_list if len(x[0])!= 0]
             smoothness_score_list = [x for x in smoothness_score_list if len(x)!=0]
             wrench_score_list = [x for x in wrench_score_list if len(x)!= 0]
@@ -150,7 +134,7 @@ class SuctionNetEval(SuctionNet):
                                                                                         np.concatenate(wrench_score_list), \
                                                                                         np.concatenate(collision_mask_list)
             
-            # sort in scene level
+            # 按置信度排序
             suction_confidence = suction_list[:, 0]
             indices = np.argsort(-suction_confidence)
             suction_list, smoothness_score_list, wrench_score_list, collision_mask_list = suction_list[indices], \
@@ -161,7 +145,7 @@ class SuctionNetEval(SuctionNet):
             suction_accuracy = np.zeros((TOP_K,len(threshold_list)))
             for threshold_idx, threshold in enumerate(threshold_list):
                 for k in range(0,TOP_K):
-                    # scores[k,fric_idx] is the average score for top k suctions with coefficient of friction at fric
+                    # scores[k,fric_idx] 表示前k个吸取点在不同摩擦系数下的平均准确率
                     if k+1 > len(wrench_score_list):
                         suction_accuracy[k, threshold_idx] = np.sum(((wrench_score_list * smoothness_score_list)>=threshold).astype(np.float32))/(k+1)
                     else:
@@ -178,19 +162,16 @@ class SuctionNetEval(SuctionNet):
 
     def parallel_eval_scenes(self, scene_ids, dump_folder, proc=2):
         '''
-        **Input:**
-        
-        - scene_ids: list of int of scene index.
-        
-        - dump_folder: string of the folder that saves the npy files.
-        
-        - proc: int of the number of processes to use to evaluate.
-        
-        **Output:**
-        
-        - scene_acc_list: list of the scene accuracy.
+        并行评估多个场景。
+
+        输入参数:
+        - scene_ids: 场景编号列表
+        - dump_folder: 预测结果保存目录
+        - proc: 并行进程数
+
+        输出:
+        - scene_acc_list: 每个场景的准确率结果列表
         '''
-        
         from multiprocessing import Pool
         p = Pool(processes = proc)
         res_list = []
@@ -213,25 +194,18 @@ class SuctionNetEval(SuctionNet):
     
     def eval_seen(self, dump_folder, proc = 2):
         '''
-        
-        **Input:**
-        
-        - dump_folder: string of the folder that saves the npy files.
-        
-        - proc: int of the number of processes to use to evaluate.
-        
-        **Output:**
-        
-        - res: numpy array of the detailed accuracy.
-        
-        - ap_top50: float of the AP of the top 50 suctions for seen split.
-       
-        - ap_top1: float of the AP of the top 1 suctions for seen split.
+        评估test_seen划分的所有场景。
+
+        输入参数:
+        - dump_folder: 预测结果保存目录
+        - proc: 并行进程数
+
+        输出:
+        - res: 详细准确率数组
+        - ap_top50: 前50个吸取点的平均准确率
+        - ap_top1: 前1个吸取点的平均准确率
         '''
         res = np.array(self.parallel_eval_scenes(scene_ids = list(range(100, 130)), dump_folder = dump_folder, proc = proc))
-        # ap = np.mean(res)
-        # print('\nEvaluation Result:\n----------\n{}, AP Seen={}'.format(self.camera, ap))
-        # return res, ap
 
         ap_top50 = np.mean(res[:, :, :50, :])
         print('\nEvaluation Result of Top 50 Suctions:\n----------\n{}, AP Seen={:6f}'.format(self.camera, ap_top50))
@@ -267,25 +241,18 @@ class SuctionNetEval(SuctionNet):
 
     def eval_similar(self, dump_folder, proc = 2):
         '''
-        **Input:**
-        
-        - dump_folder: string of the folder that saves the npy files.
-        
-        - proc: int of the number of processes to use to evaluate.
-        
-        **Output:**
-        
-        - res: numpy array of the detailed accuracy.
-        
-        - ap_top50: float of the AP of the top 50 suctions for similar split.
-        
-        - ap_top1: float of the AP of the top 1 suctions for similar split.
+        评估test_similar划分的所有场景。
+
+        输入参数:
+        - dump_folder: 预测结果保存目录
+        - proc: 并行进程数
+
+        输出:
+        - res: 详细准确率数组
+        - ap_top50: 前50个吸取点的平均准确率
+        - ap_top1: 前1个吸取点的平均准确率
         '''
-        
         res = np.array(self.parallel_eval_scenes(scene_ids = list(range(130, 160)), dump_folder = dump_folder, proc = proc))
-        # ap = np.mean(res)
-        # print('\nEvaluation Result:\n----------\n{}, AP={}, AP Similar={}'.format(self.camera, ap, ap))
-        # return res, ap
 
         ap_top50 = np.mean(res[:, :, :50, :])
         print('\nEvaluation Result of Top 50 Suctions:\n----------\n{}, AP Similar={:6f}'.format(self.camera, ap_top50))
@@ -321,23 +288,18 @@ class SuctionNetEval(SuctionNet):
 
     def eval_novel(self, dump_folder, proc = 2):
         '''
-        **Input:**
-        
-        - dump_folder: string of the folder that saves the npy files.
-        
-        - proc: int of the number of processes to use to evaluate.
-        
-        **Output:**
-        
-        - res: numpy array of the detailed accuracy.
-        
-        - ap_top50: float of the AP of top 50 suctions for novel split.
-        
-        - ap_top1: float of the AP of top 1 suction for novel split.
+        评估test_novel划分的所有场景。
+
+        输入参数:
+        - dump_folder: 预测结果保存目录
+        - proc: 并行进程数
+
+        输出:
+        - res: 详细准确率数组
+        - ap_top50: 前50个吸取点的平均准确率
+        - ap_top1: 前1个吸取点的平均准确率
         '''
         res = np.array(self.parallel_eval_scenes(scene_ids = list(range(160, 190)), dump_folder = dump_folder, proc = proc))
-        # ap = np.mean(res)
-        # print('\nEvaluation Result:\n----------\n{}, AP={}, AP Novel={}'.format(self.camera, ap, ap))
         
         ap_top50 = np.mean(res[:, :, :50, :])
         print('\nEvaluation Result of Top 50 Suctions:\n----------\n{}, AP Novel={:6f}'.format(self.camera, ap_top50))
@@ -373,24 +335,18 @@ class SuctionNetEval(SuctionNet):
 
     def eval_all(self, dump_folder, proc=2):
         '''
-        **Input:**
-        
-        - dump_folder: string of the folder that saves the npy files.
-        
-        - proc: int of the number of processes to use to evaluate.
-        
-        **Output:**
-        
-        - res: numpy array of the detailed accuracy.
-        
-        - ap_top50: float of the AP of top 50 suctions for all split.
-        
-        - ap_top1: float of the AP of top 1 suctions for all split.
-        '''
+        评估所有测试集（seen、similar、novel）的场景。
 
+        输入参数:
+        - dump_folder: 预测结果保存目录
+        - proc: 并行进程数
+
+        输出:
+        - res: 详细准确率数组
+        - ap_top50: 前50个吸取点的平均准确率（总/seen/similar/novel）
+        - ap_top1: 前1个吸取点的平均准确率（总/seen/similar/novel）
+        '''
         res = np.array(self.parallel_eval_scenes(scene_ids=list(range(100, 190)), dump_folder=dump_folder, proc=proc))
-        # ap = [np.mean(res), np.mean(res[0:30]), np.mean(res[30:60]), np.mean(res[60:90])]
-        # print('\nEvaluation Result:\n----------\n{}, AP={}, AP Seen={}, AP Similar={}, AP Novel={}'.format(self.camera, ap[0], ap[1], ap[2], ap[3]))
         
         ap_top50 = [np.mean(res[:, :, :50, :]), np.mean(res[0:30, :, :50, :]), np.mean(res[30:60, :, :50, :]), np.mean(res[60:90, :, :50, :])]
         print('\nEvaluation Result of Top 50 Suctions:\n----------\n{}, AP={:6f}, AP Seen={:6f}, AP Similar={:6f}, AP Novel={:6f}'.format(self.camera, ap_top50[0], ap_top50[1], ap_top50[2], ap_top50[3]))

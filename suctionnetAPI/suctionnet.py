@@ -4,45 +4,39 @@ __version__ = '1.0'
 # TODO
 # check_data_completeness (wrench), showObjSuction, showSceneSuction, show6DPose, loadSuctionLabels, loadSuction
 
-# Interface for accessing the SuctionNet-1Billion dataset.
-# Description and part of the codes modified from MSCOCO api
+# SuctionNet-1Billion数据集的访问接口。
+# 说明及部分代码修改自MSCOCO api
 
-# SuctionNet is an open project for general object suction grasping that is continuously enriched.
-# Currently we release SuctionNet-1Billion, a large-scale benchmark for general object suction grasping,
-# as well as other related areas (e.g. 6D pose estimation, unseen object segmentation, etc.).
-# suctionnetapi is a Python API that # assists in loading, parsing and visualizing the
-# annotations in SuctionNet. Please visit https://graspnet.net/ for more information on SuctionNet,
-# including for the data, paper, and tutorials. The exact format of the annotations
-# is also described on the website. For example usage of the suctionnetapi
-# please see suctionnetapi_demo.ipynb. In addition to this API, please download both
-# the SuctionNet images and annotations in order to run the demo.
+# SuctionNet是一个面向通用物体吸取抓取的开放项目，持续丰富中。
+# 当前发布了SuctionNet-1Billion，这是一个大规模的通用物体吸取抓取基准数据集，
+# 也适用于其他相关领域（如6D位姿估计、未知物体分割等）。
+# suctionnetapi是一个Python API，辅助加载、解析和可视化SuctionNet中的标注信息。
+# 更多关于SuctionNet的数据、论文和教程，请访问 https://graspnet.net/。
+# 标注的具体格式也在官网有详细说明。suctionnetapi_demo.ipynb中有API的使用示例。
+# 除了本API外，也可以直接将标注文件加载为Python字典。
+# 使用API可获得更多实用功能。注意本API同时支持*吸取抓取*和*6D位姿*标注。
+# 对于6D位姿，部分函数未定义（如碰撞相关）。
 
-# An alternative to using the API is to load the annotations directly
-# into Python dictionary
-# Using the API provides additional utility functions. Note that this API
-# supports both *grasping* and *6d pose* annotations. In the case of
-# 6d poses not all functions are defined (e.g. collisions are undefined).
+# 本API定义了如下主要函数：
+#  SuctionNet             - SuctionNet主类，加载SuctionNet标注文件并准备数据结构。
+#  getSceneIds            - 获取满足条件的场景ID列表。
+#  getObjIds              - 获取满足条件的物体ID列表。
+#  getDataIds             - 获取满足条件的数据ID列表。
+#  loadSuctionLabels      - 加载指定物体ID的吸取标签。
+#  loadObjModels          - 加载指定物体ID的三维模型。
+#  loadCollisionLabels    - 加载指定场景ID的碰撞标签。
+#  loadSuction            - 加载指定场景和标注ID的吸取标签。
+#  loadData               - 加载指定数据ID的数据路径。
+#  showObjSuction         - 可视化指定物体ID的吸取姿态。
+#  showSceneCollision     - 可视化指定场景ID的碰撞标签。
+#  showSceneWrench        - 可视化指定场景ID的抗扭矩标签。
+#  show6DPose             - 可视化指定场景ID的6D位姿，将物体模型投影到点云上。
+# 在API中，"ann"=annotation（标注），"obj"=object（物体），"img"=image（图像）。
 
-# The following API functions are defined:
-#  SuctionNet             - SuctionNet api class that loads SuctionNet annotation file and prepare data structures.
-#  getSceneIds          - Get scene ids that satisfy given filter conditions.
-#  getObjIds            - Get obj ids that satisfy given filter conditions.
-#  getDataIds           - Get data ids that satisfy given filter conditions.
-#  loadSuctionLabels      - Load suction labels with the specified object ids.
-#  loadObjModels        - Load object 3d mesh model with the specified object ids.
-#  loadCollisionLabels  - Load collision labels with the specified scene ids.
-#  loadSuction            - Load suction labels with the specified scene and annotation id.
-#  loadData             - Load data path with the specified data ids.
-#  showObjSuction         - visualization of the suction pose of specified object ids.
-#  showSceneCollision       - visualization of the collision labels of specified scene ids.
-#  showSceneWrench       - visualization of the wrench labels of specified scene ids.
-#  show6DPose           - visualization of the 6d pose of specified scene ids, project obj models onto pointcloud
-# Throughout the API "ann"=annotation, "obj"=object, and "img"=image.
-
-# SuctionNet Toolbox.      version 1.0
-# Data, paper, and tutorials available at:  https://graspnet.net/
-# Code written by Hanwen Cao, 2021.
-# Licensed under the none commercial CC4.0 license [see https://graspnet.net/about]
+# SuctionNet工具箱，版本1.0
+# 数据、论文和教程请见：https://graspnet.net/
+# 代码作者：Hanwen Cao，2021年。
+# 仅限非商业用途，遵循CC4.0协议 [见 https://graspnet.net/about]
 
 import os
 import numpy as np
@@ -61,29 +55,29 @@ from .utils.rotation import viewpoint_to_matrix
 TOTAL_SCENE_NUM = 190
 
 def _isArrayLike(obj):
+    # 判断对象是否为可迭代且有长度（如list、numpy数组等）
     return hasattr(obj, '__iter__') and hasattr(obj, '__len__')
 
 class SuctionNet():
     '''
-    suctionnetAPI main class.
-    
-    **input**:
-    
-    - camera: string of type of camera: "kinect" or "realsense"
-    
-    - split: string of type of split of dataset: "all", "train", "test", "test_seen", "test_similar" or "test_novel"
+    suctionnetAPI主类。
+
+    输入参数:
+    - root: 数据集根目录（字符串）
+    - camera: 相机类型（字符串），可选"kinect"或"realsense"
+    - split: 数据集划分（字符串），可选"all"、"train"、"test"、"test_seen"、"test_similar"、"test_novel"
     '''
 
     def __init__(self, root, camera='kinect', split='all'):
-
-        assert camera in ['kinect', 'realsense'], 'camera should be kinect or realsense'
-        assert split in ['all', 'train', 'test', 'test_seen', 'test_similar', 'test_novel'], 'split should be all/train/test/test_seen/test_similar/test_novel'
+        # 初始化SuctionNet对象，加载数据路径和基本信息
+        assert camera in ['kinect', 'realsense'], 'camera应为kinect或realsense'
+        assert split in ['all', 'train', 'test', 'test_seen', 'test_similar', 'test_novel'], 'split应为all/train/test/test_seen/test_similar/test_novel'
         self.root = root
-        
         self.camera = camera
         self.split = split
         self.collisionLabels = {}
 
+        # 根据split选择场景ID范围
         if split == 'all':
             self.sceneIds = list(range(TOTAL_SCENE_NUM))
         elif split == 'train':
@@ -97,6 +91,7 @@ class SuctionNet():
         elif split == 'test_novel':
             self.sceneIds = list(range(160, 190))
 
+        # 预加载所有数据路径
         self.rgbPath = []
         self.depthPath = []
         self.segLabelPath = []
@@ -121,17 +116,18 @@ class SuctionNet():
         self.objIds = None
 
     def __len__(self):
+        # 返回数据集中的数据数量
         return len(self.depthPath)
 
     def check_data_completeness(self):
         '''
-        Check whether the dataset files are complete.
+        检查数据集文件是否完整。
 
-        **Output:**
-
-        - bool, True for complete, False for not complete.
+        输出:
+        - bool类型，True表示完整，False表示有缺失
         '''
         error_flag = False
+        # 检查模型文件
         for obj_id in tqdm(range(88), 'Checking Models'):
             if not os.path.exists(os.path.join(self.root, 'models','%03d' % obj_id, 'nontextured.ply')):
                 error_flag = True
@@ -142,22 +138,27 @@ class SuctionNet():
             if not os.path.exists(os.path.join(self.root, 'models','%03d' % obj_id, 'textured.obj')):
                 error_flag = True
                 print('No textured.obj For Object {}'.format(obj_id))
+        # 检查稠密点云
         for obj_id in tqdm(range(88), 'Checking Dense Point Clouds'):
             if not os.path.exists(os.path.join(self.root, 'dense_point_clouds', '%03d.npz' % obj_id)):
                 error_flag = True
                 print('No Dense Point Cloud For Object {}'.format(obj_id))
+        # 检查密封标签
         for obj_id in tqdm(range(88), 'Checking Seal Labels'):
             if not os.path.exists(os.path.join(self.root, 'seal_label', '%03d_seal.npz' % obj_id)):
                 error_flag = True
                 print('No Seal Label For Object {}'.format(obj_id))
+        # 检查抗扭矩标签
         for sceneId in tqdm(self.sceneIds, 'Checking Wrench Labels'):
             if not os.path.exists(os.path.join(self.root, 'wrench_label', '%04d_wrench.npz' % sceneId)):
                 error_flag = True
                 print('No Wrench Label For Scene {}'.format(sceneId))
+        # 检查碰撞标签
         for sceneId in tqdm(self.sceneIds, 'Checking Collosion Labels'):
             if not os.path.exists(os.path.join(self.root, 'suction_collision_label', '%04d_collision.npz' % sceneId)):
                 error_flag = True
                 print('No Collision Labels For Scene {}'.format(sceneId))
+        # 检查场景数据
         for sceneId in tqdm(self.sceneIds, 'Checking Scene Datas'):
             scene_dir = os.path.join(self.root, 'scenes', 'scene_%04d' % sceneId)
             if not os.path.exists(os.path.join(scene_dir,'object_id_list.txt')):
@@ -198,17 +199,17 @@ class SuctionNet():
 
     def getSceneIds(self, objIds=None):
         '''
-        **Input:**
+        获取包含指定物体ID的所有场景ID。
 
-        - objIds: int or list of int of the object ids.
+        输入参数:
+        - objIds: int或int列表，物体ID
 
-        **Output:**
-
-        - a list of int of the scene ids that contains **all** the objects.
+        输出:
+        - 包含所有指定物体的场景ID列表
         '''
         if objIds is None:
             return self.sceneIds
-        assert _isArrayLike(objIds) or isinstance(objIds, int), 'objIds must be integer or a list/numpy array of integers'
+        assert _isArrayLike(objIds) or isinstance(objIds, int), 'objIds必须为整数或整数列表/numpy数组'
         objIds = objIds if _isArrayLike(objIds) else [objIds]
         sceneIds = []
         for i in self.sceneIds:
@@ -221,18 +222,17 @@ class SuctionNet():
 
     def getObjIds(self, sceneIds=None):
         '''
-        **Input:**
+        获取指定场景ID中的所有物体ID。
 
-        - sceneIds: int or list of int of the scene ids.
+        输入参数:
+        - sceneIds: int或int列表，场景ID
 
-        **Output:**
-
-        - a list of int of the object ids in the given scenes.
+        输出:
+        - 物体ID列表
         '''
-        # get object ids in the given scenes
         if sceneIds is None:
             return self.objIds
-        assert _isArrayLike(sceneIds) or isinstance(sceneIds, int), 'sceneIds must be an integer or a list/numpy array of integers'
+        assert _isArrayLike(sceneIds) or isinstance(sceneIds, int), 'sceneIds必须为整数或整数列表/numpy数组'
         sceneIds = sceneIds if _isArrayLike(sceneIds) else [sceneIds]
         objIds = []
         for i in sceneIds:
@@ -243,15 +243,14 @@ class SuctionNet():
 
     def getDataIds(self, sceneIds=None):
         '''
-        **Input:**
+        获取指定场景ID对应的数据ID。
 
-        - sceneIds:int or list of int of the scenes ids.
+        输入参数:
+        - sceneIds: int或int列表，场景ID
 
-        **Output:**
-
-        - a list of int of the data ids. Data could be accessed by calling self.loadData(ids).
+        输出:
+        - 数据ID列表。可通过self.loadData(ids)访问数据。
         '''
-        # get index for datapath that contains the given scenes
         if sceneIds is None:
             return list(range(len(self.sceneName)))
         ids = []
@@ -264,20 +263,16 @@ class SuctionNet():
 
     def loadObjModels(self, objIds=None):
         '''
-        **Function:**
+        加载指定物体ID的三维点云模型。
 
-        - load object 3D models of the given obj ids
+        输入参数:
+        - objIds: int或int列表，物体ID
 
-        **Input:**
-
-        - objIDs: int or list of int of the object ids
-
-        **Output:**
-
-        - a list of open3d.geometry.PointCloud of the models
+        输出:
+        - open3d.geometry.PointCloud对象列表
         '''
         objIds = self.objIds if objIds is None else objIds
-        assert _isArrayLike(objIds) or isinstance(objIds, int), 'objIds must be an integer or a list/numpy array of integers'
+        assert _isArrayLike(objIds) or isinstance(objIds, int), 'objIds必须为整数或整数列表/numpy数组'
         objIds = objIds if _isArrayLike(objIds) else [objIds]
         models = []
         for i in tqdm(objIds, desc='Loading objects...'):
@@ -287,20 +282,16 @@ class SuctionNet():
 
     def loadObjTrimesh(self, objIds=None):
         '''
-        **Function:**
+        加载指定物体ID的三维Trimesh模型。
 
-        - load object 3D trimesh of the given obj ids
+        输入参数:
+        - objIds: int或int列表，物体ID
 
-        **Input:**
-
-        - objIDs: int or list of int of the object ids
-
-        **Output:**
-
-        - a list of rimesh.Trimesh of the models
+        输出:
+        - trimesh.Trimesh对象列表
         '''
         objIds = self.objIds if objIds is None else objIds
-        assert _isArrayLike(objIds) or isinstance(objIds, int), 'objIds must be an integer or a list/numpy array of integers'
+        assert _isArrayLike(objIds) or isinstance(objIds, int), 'objIds必须为整数或整数列表/numpy数组'
         objIds = objIds if _isArrayLike(objIds) else [objIds]
         models = []
         for i in tqdm(objIds, desc='Loading objects...'):
@@ -310,17 +301,16 @@ class SuctionNet():
 
     def loadSealLabels(self, objIds=None):
         '''
-        **Input:**
+        加载指定物体ID的密封标签。
 
-        - objIds: int or list of int of the object ids.
+        输入参数:
+        - objIds: int或int列表，物体ID
 
-        **Output:**
-
-        - a dict of seal labels of each object. 
+        输出:
+        - 每个物体的密封标签字典（points, normals, scores）
         '''
-        # load object-level grasp labels of the given obj ids
         objIds = self.objIds if objIds is None else objIds
-        assert _isArrayLike(objIds) or isinstance(objIds, int), 'objIds must be an integer or a list/numpy array of integers'
+        assert _isArrayLike(objIds) or isinstance(objIds, int), 'objIds必须为整数或整数列表/numpy数组'
         objIds = objIds if _isArrayLike(objIds) else [objIds]
         graspLabels = {}
         for i in tqdm(objIds, desc='Loading seal labels...'):
@@ -330,16 +320,16 @@ class SuctionNet():
 
     def loadWrenchLabels(self, sceneIds=None):
         '''
-        **Input:**
-        
-        - sceneIds: int or list of int of the scene ids.
+        加载指定场景ID的抗扭矩标签。
 
-        **Output:**
+        输入参数:
+        - sceneIds: int或int列表，场景ID
 
-        - dict of the wrench labels.
+        输出:
+        - wrench标签字典
         '''
         sceneIds = self.sceneIds if sceneIds is None else sceneIds
-        assert _isArrayLike(sceneIds) or isinstance(sceneIds, int), 'sceneIds must be an integer or a list/numpy array of integers'
+        assert _isArrayLike(sceneIds) or isinstance(sceneIds, int), 'sceneIds必须为整数或整数列表/numpy数组'
         sceneIds = sceneIds if _isArrayLike(sceneIds) else [sceneIds]
         wrenchLabels = {}
         for sid in tqdm(sceneIds, desc='Loading wrench labels...'):
@@ -352,16 +342,16 @@ class SuctionNet():
 
     def loadCollisionLabels(self, sceneIds=None):
         '''
-        **Input:**
-        
-        - sceneIds: int or list of int of the scene ids.
+        加载指定场景ID的碰撞标签。
 
-        **Output:**
+        输入参数:
+        - sceneIds: int或int列表，场景ID
 
-        - dict of the collision labels.
+        输出:
+        - 碰撞标签字典
         '''
         sceneIds = self.sceneIds if sceneIds is None else sceneIds
-        assert _isArrayLike(sceneIds) or isinstance(sceneIds, int), 'sceneIds must be an integer or a list/numpy array of integers'
+        assert _isArrayLike(sceneIds) or isinstance(sceneIds, int), 'sceneIds必须为整数或整数列表/numpy数组'
         sceneIds = sceneIds if _isArrayLike(sceneIds) else [sceneIds]
         collisionLabels = {}
         for sid in tqdm(sceneIds, desc='Loading collision labels...'):
@@ -374,81 +364,71 @@ class SuctionNet():
 
     def loadRGB(self, sceneId, camera, annId):
         '''
-        **Input:**
+        加载指定场景、相机和标注ID的RGB图像（RGB顺序）。
 
-        - sceneId: int of the scene index.
-        
-        - camera: string of type of camera, 'realsense' or 'kinect'
+        输入参数:
+        - sceneId: 场景编号
+        - camera: 相机类型
+        - annId: 标注编号
 
-        - annId: int of the annotation index.
-
-        **Output:**
-
-        - numpy array of the rgb in RGB order.
+        输出:
+        - numpy数组，RGB顺序
         '''
         return cv2.cvtColor(cv2.imread(os.path.join(self.root, 'scenes', 'scene_%04d' % sceneId, camera, 'rgb', '%04d.png' % annId)), cv2.COLOR_BGR2RGB)
 
     def loadBGR(self, sceneId, camera, annId):
         '''
-        **Input:**
+        加载指定场景、相机和标注ID的RGB图像（BGR顺序）。
 
-        - sceneId: int of the scene index.
-        
-        - camera: string of type of camera, 'realsense' or 'kinect'
+        输入参数:
+        - sceneId: 场景编号
+        - camera: 相机类型
+        - annId: 标注编号
 
-        - annId: int of the annotation index.
-
-        **Output:**
-
-        - numpy array of the rgb in BGR order.
+        输出:
+        - numpy数组，BGR顺序
         '''
         return cv2.imread(os.path.join(self.root, 'scenes', 'scene_%04d' % sceneId, camera, 'rgb', '%04d.png' % annId))
 
     def loadDepth(self, sceneId, camera, annId):
         '''
-        **Input:**
+        加载指定场景、相机和标注ID的深度图像。
 
-        - sceneId: int of the scene index.
-        
-        - camera: string of type of camera, 'realsense' or 'kinect'
+        输入参数:
+        - sceneId: 场景编号
+        - camera: 相机类型
+        - annId: 标注编号
 
-        - annId: int of the annotation index.
-
-        **Output:**
-
-        - numpy array of the depth with dtype = np.uint16
+        输出:
+        - numpy数组，类型为np.uint16
         '''
         return cv2.imread(os.path.join(self.root, 'scenes', 'scene_%04d' % sceneId, camera, 'depth', '%04d.png' % annId), cv2.IMREAD_UNCHANGED)
  
     def loadMask(self, sceneId, camera, annId):
         '''
-        **Input:**
+        加载指定场景、相机和标注ID的分割掩码。
 
-        - sceneId: int of the scene index.
-        
-        - camera: string of type of camera, 'realsense' or 'kinect'
+        输入参数:
+        - sceneId: 场景编号
+        - camera: 相机类型
+        - annId: 标注编号
 
-        - annId: int of the annotation index.
-
-        **Output:**
-
-        - numpy array of the mask with dtype = np.uint16
+        输出:
+        - numpy数组，类型为np.uint16
         '''
         return cv2.imread(os.path.join(self.root, 'scenes', 'scene_%04d' % sceneId, camera, 'label', '%04d.png' % annId), cv2.IMREAD_UNCHANGED)
    
     def loadWorkSpace(self, sceneId, camera, annId):
         '''
-        **Input:**
+        获取当前帧的工作空间边界框（mask非零区域的边界）。
 
-        - sceneId: int of the scene index.
-        
-        - camera: string of type of camera, 'realsense' or 'kinect'
+        输入参数:
+        - sceneId: 场景编号
+        - camera: 相机类型
+        - annId: 标注编号
 
-        - annId: int of the annotation index.
-
-        **Output:**
-
-        - numpy array of the workspace with dtype = np.int8
+        输出:
+        - (x1, y1, x2, y2)四元组，表示工作空间的左上和右下角坐标
         '''
         mask = self.loadMask(sceneId, camera, annId)
         maskx = np.any(mask, axis=0)
@@ -461,21 +441,17 @@ class SuctionNet():
 
     def loadScenePointCloud(self, sceneId, camera, annId, align=False, format = 'open3d'):
         '''
-        **Input:**
+        加载指定场景、相机和标注ID的点云。
 
-        - sceneId: int of the scene index.
-        
-        - camera: string of type of camera, 'realsense' or 'kinect'
+        输入参数:
+        - sceneId: 场景编号
+        - camera: 相机类型
+        - annId: 标注编号
+        - align: 是否对齐到桌面坐标系
+        - format: 返回格式，'open3d'或'numpy'
 
-        - annId: int of the annotation index.
-
-        - aligh: bool of whether align to the table frame.
-
-        **Output:**
-
-        - open3d.geometry.PointCloud instance of the scene point cloud.
-
-        - or tuple of numpy array of point locations and colors.
+        输出:
+        - open3d.geometry.PointCloud对象或(numpy点坐标, numpy颜色)元组
         '''
         colors = self.loadRGB(sceneId = sceneId, camera = camera, annId = annId).astype(np.float32) / 255.0
         depths = self.loadDepth(sceneId = sceneId, camera = camera, annId = annId)
@@ -511,23 +487,20 @@ class SuctionNet():
         elif format == 'numpy':
             return points, colors
         else:
-            raise ValueError('Format must be either "open3d" or "numpy".')
+            raise ValueError('Format必须为"open3d"或"numpy"。')
 
     def loadSceneModel(self, sceneId, camera = 'kinect', annId = 0, align = False):
         '''
-        **Input:**
+        加载指定场景、相机和标注ID下的所有物体模型（点云）。
 
-        - sceneId: int of the scene index.
-        
-        - camera: string of type of camera, 'realsense' or 'kinect'
+        输入参数:
+        - sceneId: 场景编号
+        - camera: 相机类型
+        - annId: 标注编号
+        - align: 是否对齐到桌面坐标系
 
-        - annId: int of the annotation index.
-
-        - align: bool of whether align to the table frame.
-
-        **Output:**
-
-        - open3d.geometry.PointCloud list of the scene models.
+        输出:
+        - open3d.geometry.PointCloud对象列表
         '''
         if align:
             camera_poses = np.load(os.path.join(self.root, 'scenes', 'scene_%04d' % sceneId, camera, 'camera_poses.npy'))
@@ -559,17 +532,15 @@ class SuctionNet():
 
     def loadData(self, ids=None, *extargs):
         '''
-        **Input:**
+        加载指定数据ID的数据路径。
 
-        - ids: int or list of int of the the data ids.
+        输入参数:
+        - ids: int或int列表，数据ID
+        - extargs: 额外参数。也可通过loadData(sceneId, camera, annId)方式调用
 
-        - extargs: extra arguments. This function can also be called with loadData(sceneId, camera, annId)
-
-        **Output:**
-
-        - if ids is int, returns a tuple of data path
-
-        - if ids is not specified or is a list, returns a tuple of data path lists
+        输出:
+        - 若ids为int，返回单个数据路径元组
+        - 若ids为None或列表，返回数据路径列表元组
         '''
         if ids is None:
             return (self.rgbPath, self.depthPath, self.segLabelPath, self.metaPath, self.sceneName, self.annId)
@@ -596,17 +567,15 @@ class SuctionNet():
 
     def showObjSuction(self, obj_id, visu_num):
         '''
-        **Input:**
-        
-        - obj_id: int of object id.
-        
-        - visu_num: how many suctions to visualize.
-        
-        **Output:**
-        
-        - No output but the 3D visualization of the object model and suctions will show up.
+        可视化指定物体的吸取点。
+
+        输入参数:
+        - obj_id: 物体ID
+        - visu_num: 可视化的吸取点数量
+
+        输出:
+        - 无返回值，弹出3D可视化窗口
         '''
-        
         ply_dir = os.path.join(self.root, 'models', '%03d' % obj_id, 'nontextured.ply')
         model = o3d.io.read_point_cloud(ply_dir)
         
@@ -639,21 +608,17 @@ class SuctionNet():
 
     def showSceneCollision(self, scene_idx, anno_idx, camera, visu_num_each):
         '''
-        **Input:**
-        
-        - scene_idx: int of the scene index.
-        
-        - anno_idx: int of the annotation index.
+        可视化指定场景的碰撞标签。
 
-        - camera: string of the camera type, 'realsense' or 'kinect'.
-        
-        - visu_num_each: int of the number of suctions to viualize on each object'.
-        
-        **Output:**
+        输入参数:
+        - scene_idx: 场景编号
+        - anno_idx: 标注编号
+        - camera: 相机类型
+        - visu_num_each: 每个物体可视化的吸取点数量
 
-        - No output but the 3D visualization of the scene and collision labels will show up.
+        输出:
+        - 无返回值，弹出3D可视化窗口
         '''
-
         scene_name = 'scene_%04d' % scene_idx
         model_list, obj_list, pose_list = generate_scene_model(self.root, scene_name, anno_idx, return_poses=True, camera=camera, align=True)
         table = create_table_cloud(1.0, 0.02, 1.0, dx=-0.5, dy=-0.5, dz=0, grid_size=0.01)
@@ -701,21 +666,17 @@ class SuctionNet():
 
     def showSceneWrench(self, scene_idx, anno_idx, camera, visu_num_each):
         '''
-        **Input:**
-        
-        - scene_idx: int of the scene index.
-        
-        - anno_idx: int of the annotation index.
+        可视化指定场景的抗扭矩标签。
 
-        - camera: string of the camera type, 'realsense' or 'kinect'.
-        
-        - visu_num_each: int of the number of suctions to viualize on each object'.
-        
-        **Output:**
+        输入参数:
+        - scene_idx: 场景编号
+        - anno_idx: 标注编号
+        - camera: 相机类型
+        - visu_num_each: 每个物体可视化的吸取点数量
 
-        - No output but the 3D visualization of the scene and collision labels will show up.
+        输出:
+        - 无返回值，弹出3D可视化窗口
         '''
-
         radius = 0.002
         height = 0.05
 
@@ -770,19 +731,16 @@ class SuctionNet():
 
     def show6DPose(self, scene_idx, anno_idx, camera):
         '''
-        **Input:**
-        
-        - scene_idx: int of the scene id. 
-        
-        - anno_idx: int of the annotation id
-        
-        - camera: string of the camera type, 'realsense' or 'kinect'.
+        可视化指定场景的6D位姿（将物体模型投影到点云上）。
 
-        **Output:**
-        
-        - No output but the visualization of the scene will show up.
+        输入参数:
+        - scene_idx: 场景编号
+        - anno_idx: 标注编号
+        - camera: 相机类型
+
+        输出:
+        - 无返回值，弹出3D可视化窗口
         '''
-
         scene_name = 'scene_%04d' % scene_idx
         model_list, _, _ = generate_scene_model(self.root, scene_name, anno_idx, return_poses=True, camera=camera, align=True)
         table = create_table_cloud(1.0, 0.02, 1.0, dx=-0.5, dy=-0.5, dz=0, grid_size=0.01)

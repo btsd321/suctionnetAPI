@@ -3,17 +3,18 @@ import open3d as o3d
 from transforms3d.euler import euler2mat
 from .rotation import batch_viewpoint_to_matrix, viewpoint_to_matrix
 
-
+# 吸取抗扭矩相关参数
 k = 15.6
-g = 9.8
-radius = 0.01
-wrench_thre = k * radius * np.pi
-
+g = 9.8  # 重力加速度
+radius = 0.01  # 吸盘半径
+wrench_thre = k * radius * np.pi  # 抗扭阈值
 
 def get_scene_name(num):
+    # 根据编号生成场景名称字符串
     return ('scene_%04d' % (num,))
 
 def create_table_points(lx, ly, lz, dx=0, dy=0, dz=0, grid_size=0.01):
+    # 创建桌面点云，lx/ly/lz为长宽高，dx/dy/dz为偏移，grid_size为采样间隔
     xmap = np.linspace(0, lx, int(lx/grid_size))
     ymap = np.linspace(0, ly, int(ly/grid_size))
     zmap = np.linspace(0, lz, int(lz/grid_size))
@@ -26,6 +27,7 @@ def create_table_points(lx, ly, lz, dx=0, dy=0, dz=0, grid_size=0.01):
     return points
 
 def parse_posevector(posevector):
+    # 将位姿向量解析为4x4变换矩阵和物体编号
     mat = np.zeros([4,4],dtype=np.float32)
     alpha, beta, gamma = posevector[4:7]
     alpha = alpha / 180.0 * np.pi
@@ -39,11 +41,11 @@ def parse_posevector(posevector):
 
 def transform_points(points, trans):
     '''
-    Input:
-        points: (N, 3)
-        trans: (4, 4)
-    Output:
-        points_trans: (N, 3)
+    输入:
+        points: (N, 3) 点云
+        trans: (4, 4) 齐次变换矩阵
+    输出:
+        points_trans: (N, 3) 变换后的点云
     '''
     ones = np.ones([points.shape[0],1], dtype=points.dtype)
     points_ = np.concatenate([points, ones], axis=-1)
@@ -53,11 +55,11 @@ def transform_points(points, trans):
 
 def compute_point_distance(A, B):
     '''
-    Input:
-        A: (N, 3)
-        B: (M, 3)
-    Output:
-        dists: (N, M)
+    输入:
+        A: (N, 3) 点集A
+        B: (M, 3) 点集B
+    输出:
+        dists: (N, M) 两点集之间的欧氏距离矩阵
     '''
     A = A[:, np.newaxis, :]
     B = B[np.newaxis, :, :]
@@ -66,11 +68,11 @@ def compute_point_distance(A, B):
 
 def compute_closest_points(A, B):
     '''
-    Input:
-        A: (N, 3)
-        B: (M, 3)
-    Output:
-        indices: (N,) closest point index in B for each point in A
+    输入:
+        A: (N, 3) 点集A
+        B: (M, 3) 点集B
+    输出:
+        indices: (N,) A中每个点在B中最近点的索引
     '''
     dists = compute_point_distance(A, B)
     indices = np.argmin(dists, axis=-1)
@@ -78,10 +80,10 @@ def compute_closest_points(A, B):
 
 def voxel_sample_points(points, voxel_size=0.008):
     '''
-    Input:
-        points: (N, 3)
-    Output:
-        points: (n, 3)
+    输入:
+        points: (N, 3) 点云
+    输出:
+        points: (n, 3) 体素下采样后的点云
     '''
     cloud = o3d.geometry.PointCloud()
     cloud.points = o3d.utility.Vector3dVector(points)
@@ -91,11 +93,11 @@ def voxel_sample_points(points, voxel_size=0.008):
 
 def topk_suctions(suctions, k=10):
     '''
-    Input:
-        suctions: (N, 17)
-        k: int
-    Output:
-        topk_suctions: (k, 17)
+    输入:
+        suctions: (N, 17) 吸取点信息
+        k: int，保留前k个
+    输出:
+        topk_suctions: (k, 17) 置信度最高的k个吸取点
     '''
     assert(k > 0)
     suction_confidence = suctions[:, 0]
@@ -105,6 +107,7 @@ def topk_suctions(suctions, k=10):
     return topk_suctions
 
 def get_suction_score(suction, model_points, align_mat, camera_pose):
+    # 计算单个吸取点的平滑度分数和抗扭分数
     suction_point = suction[4:7]
     direction = suction[1:4]
     g_direction = np.array([[0, 0, -1]], dtype=np.float32)
@@ -116,8 +119,8 @@ def get_suction_score(suction, model_points, align_mat, camera_pose):
     wrench_score = get_wrench_score(suction_point, direction, center, g_direction)
     return smoothness_score, wrench_score
 
-
 def get_smoothness_score(suction_point, direction, model_points):
+    # 计算吸取点的密封性/平滑度分数
     radius = 0.01
     num_split = 72
     radian_bins = []
@@ -141,6 +144,7 @@ def get_smoothness_score(suction_point, direction, model_points):
 
     suction_failed = False
 
+    # 构造吸盘坐标系
     new_z = direction
     new_z = new_z / np.linalg.norm(new_z)
     new_y = np.array((new_z[1], -new_z[0], 0), dtype=np.float64)
@@ -156,6 +160,7 @@ def get_smoothness_score(suction_point, direction, model_points):
     new_coords = np.concatenate((new_x, new_y, new_z), axis=-1)
     rot_matrix = new_coords
 
+    # 点云变换到吸盘坐标系
     translated_points = model_points - suction_point[np.newaxis, :]
     transformed_points = np.dot(translated_points, rot_matrix)
 
@@ -190,7 +195,7 @@ def get_smoothness_score(suction_point, direction, model_points):
         bin_points_list.append(bin_points)
         real_vertices.append(np.array([x[j-1], y[j-1], bin_points[:, 2].max()]))
 
-    
+    # 计算密封性分数
     if suction_failed:
         quality = 0
     else:
@@ -221,8 +226,8 @@ def get_smoothness_score(suction_point, direction, model_points):
     
     return quality
 
-
 def get_wrench_score(suction_point, direction, center, g_direction):     
+    # 计算吸取点的抗扭分数
     gravity = g_direction * g
 
     suction_axis = viewpoint_to_matrix(direction)
@@ -239,15 +244,14 @@ def get_wrench_score(suction_point, direction, center, g_direction):
 
     return score
 
-
 def collision_detection(suction_list, model_list, scene_points, outlier=0.1):
     '''
-    Input:
-        suction_list: [(k1,17), (k2,17), ..., (kn,17)] in camera coordinate
-        model_list: [(N1, 3), (N2, 3), ..., (Nn, 3)] in camera coordinate
-        scene_points: (Ns, 3) in camera coordinate
-    Output:
-        collsion_mask_list: [(k1,), (k2,), ..., (kn,)]
+    输入:
+        suction_list: [(k1,17), (k2,17), ..., (kn,17)]，每个物体的吸取点（相机坐标系下）
+        model_list: [(N1, 3), (N2, 3), ..., (Nn, 3)]，每个物体的点云（相机坐标系下）
+        scene_points: (Ns, 3) 场景点云（相机坐标系下）
+    输出:
+        collsion_mask_list: [(k1,), (k2,), ..., (kn,)]，每个吸取点是否碰撞的布尔掩码
     '''
     height = 0.1
     radius = 0.01
@@ -267,7 +271,7 @@ def collision_detection(suction_list, model_list, scene_points, outlier=0.1):
         suction_points = suctions[:, 4:7]
         suction_directions = suctions[:, 1:4]
         
-        # crop scene, remove outlier
+        # 裁剪场景点，去除离物体较远的点
         xmin, xmax = model[:,0].min(), model[:,0].max()
         ymin, ymax = model[:,1].min(), model[:,1].max()
         zmin, zmax = model[:,2].min(), model[:,2].max()
@@ -278,7 +282,7 @@ def collision_detection(suction_list, model_list, scene_points, outlier=0.1):
         
         target = (workspace[np.newaxis,:,:] - suction_points[:,np.newaxis,:])
         
-        suction_poses = batch_viewpoint_to_matrix(suction_directions) # suction to camera coordinate
+        suction_poses = batch_viewpoint_to_matrix(suction_directions) # 吸盘方向变换到相机坐标系
         
         target = np.matmul(target, suction_poses)
         target_yz = target[..., 1:3]
@@ -293,16 +297,17 @@ def collision_detection(suction_list, model_list, scene_points, outlier=0.1):
 
 def eval_suction(suction_group, models, dense_models, poses, align_mat, camera_pose, table=None):
     '''
-        models: in model coordinate
-        poses: from model to camera coordinate
-        table: in camera coordinate
+        对吸取点进行评估，返回每个物体的吸取点、平滑度分数、抗扭分数和碰撞掩码
+        models: 物体点云（模型坐标系）
+        poses: 物体到相机的变换
+        table: 桌面点云（相机坐标系），可选
     '''
     num_models = len(models)
-    ## suction nms
+    ## 吸取点非极大值抑制
     suction_group = suction_group.nms(0.02, 181.0/180*np.pi)
 
-    ## assign suctions to object
-    # merge and sample scene
+    ## 吸取点分配到各个物体
+    # 合并并采样场景点云
     model_trans_list = list()
     dense_model_trans_list = list()
     seg_mask = list()
@@ -319,7 +324,7 @@ def eval_suction(suction_group, models, dense_models, poses, align_mat, camera_p
     seg_mask = np.concatenate(seg_mask, axis=0)
     scene = np.concatenate(model_trans_list, axis=0)
     
-    # assign suctions
+    # 吸取点分配到最近的物体
     indices = compute_closest_points(suction_group.translations(), scene)
     model_to_suction = seg_mask[indices]
     suction_list = list()
@@ -331,14 +336,14 @@ def eval_suction(suction_group, models, dense_models, poses, align_mat, camera_p
         suction_i = topk_suctions(suction_i, k=10)
         suction_list.append(suction_i)
 
-    ## collision detection
+    ## 碰撞检测
     if table is not None:
         scene = np.concatenate([scene, table])
     
     collision_mask_list = collision_detection(suction_list, model_trans_list, scene, outlier=0.05)
         
-    # evaluate suctions
-    # get suction scores
+    # 评估吸取点
+    # 计算吸取点的平滑度和抗扭分数
     smoothness_score_list = list()
     wrench_score_list = list()
 

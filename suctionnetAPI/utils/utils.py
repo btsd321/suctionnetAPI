@@ -8,6 +8,7 @@ from .xmlhandler import xmlReader
 
 class CameraInfo():
     def __init__(self, width, height, fx, fy, cx, cy, scale):
+        # 相机内参信息类
         self.width = width
         self.height = height
         self.fx = fx
@@ -18,13 +19,10 @@ class CameraInfo():
 
 def get_camera_intrinsic(camera):
     '''
-    **Input:**
-
-    - camera: string of type of camera, "realsense" or "kinect".
-
-    **Output:**
-
-    - numpy array of shape (3, 3) of the camera intrinsic matrix.
+    输入:
+        camera: 字符串，相机类型，"realsense" 或 "kinect"
+    输出:
+        intrinsic: numpy数组，形状为(3, 3)，相机内参矩阵
     '''
     param = o3d.camera.PinholeCameraParameters()
     if camera == 'kinect':
@@ -35,6 +33,7 @@ def get_camera_intrinsic(camera):
     return intrinsic
 
 def create_point_cloud_from_depth_image(depth, camera, organized=True):
+    # 根据深度图和相机内参生成点云
     assert(depth.shape[0] == camera.height and depth.shape[1] == camera.width)
     xmap = np.arange(camera.width)
     ymap = np.arange(camera.height)
@@ -48,6 +47,7 @@ def create_point_cloud_from_depth_image(depth, camera, organized=True):
     return cloud
 
 def generate_views(N, phi=(np.sqrt(5)-1)/2, center=np.zeros(3, dtype=np.float32), R=1):
+    # 生成N个均匀分布在球面上的视点
     idxs = np.arange(N, dtype=np.float32)
     Z = (2 * idxs + 1) / N - 1
     X = np.sqrt(1 - Z**2) * np.cos(2 * idxs * np.pi * phi)
@@ -57,7 +57,7 @@ def generate_views(N, phi=(np.sqrt(5)-1)/2, center=np.zeros(3, dtype=np.float32)
     return views
 
 def generate_scene_model(dataset_root, scene_name, anno_idx, return_poses=False, align=False, camera='realsense'):
-
+    # 生成场景中所有物体的点云模型（可选返回物体位姿）
     if align:
         print('align')
         camera_poses = np.load(os.path.join(dataset_root, 'scenes', scene_name, camera, 'camera_poses.npy'))
@@ -93,6 +93,7 @@ def generate_scene_model(dataset_root, scene_name, anno_idx, return_poses=False,
         return model_list
 
 def generate_scene_pointcloud(dataset_root, scene_name, anno_idx, align=False, camera='kinect'):
+    # 生成场景点云（包含颜色），可选对齐到桌面坐标系
     colors = np.array(Image.open(os.path.join(dataset_root, 'scenes', scene_name, camera, 'rgb', '%04d.png'%anno_idx)), dtype=np.float32) / 255.0
     depths = np.array(Image.open(os.path.join(dataset_root, 'scenes', scene_name, camera, 'depth', '%04d.png'%anno_idx)))
     intrinsics = np.load(os.path.join(dataset_root, 'scenes', scene_name, camera, 'camK.npy'))
@@ -127,6 +128,7 @@ def generate_scene_pointcloud(dataset_root, scene_name, anno_idx, align=False, c
     return cloud
 
 def rotation_matrix(rx, ry, rz):
+    # 根据欧拉角（弧度）生成旋转矩阵
     Rx = np.array([[1,          0,           0],
                    [0, np.cos(rx), -np.sin(rx)],
                    [0, np.sin(rx),  np.cos(rx)]])
@@ -140,6 +142,7 @@ def rotation_matrix(rx, ry, rz):
     return R
 
 def transform_matrix(tx, ty, tz, rx, ry, rz):
+    # 根据平移和旋转参数生成4x4齐次变换矩阵
     trans = np.eye(4)
     trans[:3,3] = np.array([tx, ty, tz])
     rot_x = np.array([[1,          0,           0],
@@ -155,6 +158,7 @@ def transform_matrix(tx, ty, tz, rx, ry, rz):
     return trans
 
 def matrix_to_dexnet_params(matrix):
+    # 将旋转矩阵转换为Dex-Net抓取参数（binormal和旋转角度）
     approach = matrix[:, 0]
     binormal = matrix[:, 1]
     axis_y = binormal
@@ -173,6 +177,7 @@ def matrix_to_dexnet_params(matrix):
     return binormal, angle
 
 def viewpoint_params_to_matrix(towards, angle):
+    # 根据朝向向量和旋转角度生成旋转矩阵
     axis_x = towards
     axis_y = np.array([-axis_x[1], axis_x[0], 0])
     if np.linalg.norm(axis_y) == 0:
@@ -188,6 +193,7 @@ def viewpoint_params_to_matrix(towards, angle):
     return matrix
 
 def dexnet_params_to_matrix(binormal, angle):
+    # 根据Dex-Net参数（binormal和角度）生成旋转矩阵
     axis_y = binormal
     axis_x = np.array([axis_y[1], -axis_y[0], 0])
     if np.linalg.norm(axis_x) == 0:
@@ -203,12 +209,14 @@ def dexnet_params_to_matrix(binormal, angle):
     return matrix
 
 def transform_points(points, trans):
+    # 对点云进行齐次变换
     ones = np.ones([points.shape[0],1], dtype=points.dtype)
     points_ = np.concatenate([points, ones], axis=-1)
     points_ = np.matmul(trans, points_.T).T
     return points_[:,:3]
 
 def get_model_suctions(datapath):
+    # 读取模型吸取点、法向量、分数和碰撞信息
     dump = np.load(datapath)
     points = dump['points']
     normals = dump['normals']
@@ -217,6 +225,7 @@ def get_model_suctions(datapath):
     return points, normals, scores, collision
 
 def parse_posevector(posevector):
+    # 将位姿向量解析为4x4变换矩阵和物体编号
     mat = np.zeros([4,4],dtype=np.float32)
     alpha, beta, gamma = posevector[4:7]
     alpha = alpha / 180.0 * np.pi
@@ -229,6 +238,7 @@ def parse_posevector(posevector):
     return obj_idx, mat
 
 def create_mesh_cylinder(R, t, score, radius=0.01, height=0.1):
+    # 创建吸盘圆柱体网格，用于可视化吸取点
     cylinder = o3d.geometry.TriangleMesh().create_cylinder(radius, height)
     vertices = np.asarray(cylinder.vertices)[:, [2, 1, 0]]
     vertices[:, 0] += height / 2
@@ -242,6 +252,7 @@ def create_mesh_cylinder(R, t, score, radius=0.01, height=0.1):
     return cylinder
 
 def create_mesh_cylinder_detection(R, t, collision, radius, height):
+    # 创建带有碰撞信息的吸盘圆柱体网格
     cylinder = o3d.geometry.TriangleMesh().create_cylinder(radius, height)
     vertices = np.asarray(cylinder.vertices)[:, [2, 1, 0]]
     vertices[:, 0] += height / 2
@@ -259,19 +270,22 @@ def create_mesh_cylinder_detection(R, t, collision, radius, height):
 
 def plot_sucker(R, t, score, radius=0.01, height=0.1):
     '''
-        center: target point
-        R: rotation matrix
+        可视化吸盘
+        center: 吸盘中心点
+        R: 旋转矩阵
     '''
     return create_mesh_cylinder(R, t, score, radius, height)
 
 def plot_sucker_collision(R, t, collision, radius=0.01, height=0.1):
     '''
-        center: target point
-        R: rotation matrix
+        可视化带碰撞信息的吸盘
+        center: 吸盘中心点
+        R: 旋转矩阵
     '''
     return create_mesh_cylinder_detection(R, t, collision, radius, height)
 
 def create_table_cloud(width, height, depth, dx=0, dy=0, dz=0, grid_size=0.01):
+    # 创建桌面点云
     xmap = np.linspace(0, width, int(width/grid_size))
     ymap = np.linspace(0, depth, int(depth/grid_size))
     zmap = np.linspace(0, height, int(height/grid_size))
@@ -281,12 +295,12 @@ def create_table_cloud(width, height, depth, dx=0, dy=0, dz=0, grid_size=0.01):
     zmap += dz
     points = np.stack([xmap, -ymap, -zmap], axis=-1)
     points = points.reshape([-1, 3])
-    # print('points',points.shape)
     cloud = o3d.geometry.PointCloud()
     cloud.points = o3d.utility.Vector3dVector(points)
     return cloud
 
 def create_axis(length,grid_size = 0.01):
+    # 创建三维坐标轴点云
     num = int(length / grid_size)
     xmap = np.linspace(0,length,num)
     ymap = np.linspace(0,2*length,num)
@@ -295,12 +309,12 @@ def create_axis(length,grid_size = 0.01):
     y_p = np.vstack([np.zeros((1,num)),ymap.T,np.zeros((1,num))])
     z_p = np.vstack([np.zeros((1,num)),np.zeros((1,num)),zmap.T])
     p = np.hstack([x_p,y_p,z_p])
-    # print('p',p.shape)
     cloud = o3d.geometry.PointCloud()
     cloud.points = o3d.utility.Vector3dVector(p.T)
     return cloud
 
 def plot_axis(R,center,length,grid_size = 0.01):
+    # 可视化三维坐标轴
     num = int(length / grid_size)
     xmap = np.linspace(0,length,num)
     ymap = np.linspace(0,2*length,num)
@@ -309,13 +323,13 @@ def plot_axis(R,center,length,grid_size = 0.01):
     y_p = np.vstack([np.zeros((1,num)),ymap.T,np.zeros((1,num))])
     z_p = np.vstack([np.zeros((1,num)),np.zeros((1,num)),zmap.T])
     p = np.hstack([x_p,y_p,z_p])
-    # print('p',p.shape)
     p = np.dot(R, p).T + center
     cloud = o3d.geometry.PointCloud()
     cloud.points = o3d.utility.Vector3dVector(p)
     return cloud
 
 def find_scene_by_model_id(dataset_root, model_id_list):
+    # 根据物体id列表查找包含这些物体的场景名称
     picked_scene_names = []
     scene_names = ['scene_'+str(i).zfill(4) for i in range(190)]
     for scene_name in scene_names:
@@ -333,6 +347,7 @@ def find_scene_by_model_id(dataset_root, model_id_list):
     return picked_scene_names
 
 def get_obj_pose_list(camera_pose, pose_vectors):
+    # 根据相机位姿和物体位姿向量，计算每个物体在相机坐标系下的4x4变换矩阵
     import numpy as np
     obj_list = []
     mat_list = []
@@ -350,29 +365,19 @@ def get_obj_pose_list(camera_pose, pose_vectors):
 
 def batch_rgbdxyz_2_rgbxy_depth(points, camera):
     '''
-    **Input:**
-
-    - points: np.array(-1,3) of the points in camera frame
-
-    - camera: string of the camera type
-
-    **Output:**
-
-    - coords: float of xy in pixel frame [-1, 2]
-
-    - depths: float of the depths of pixel frame [-1]
+    输入:
+        points: np.array(-1,3)，相机坐标系下的点
+        camera: 字符串，相机类型
+    输出:
+        coords: float，像素坐标xy，形状为(-1,2)
+        depths: float，像素深度，形状为(-1,)
     '''
     intrinsics = get_camera_intrinsic(camera)
     fx, fy = intrinsics[0,0], intrinsics[1,1]
     cx, cy = intrinsics[0,2], intrinsics[1,2]
     s = 1000.0
     depths = s * points[:,2] # point_z
-    ###################################
-    # x and y should be inverted here #
-    ###################################
-    # y = point[0] / point[2] * fx + cx 
-    # x = point[1] / point[2] * fy + cy
-    # cx = 640, cy = 360 
+    # 注意：x和y的计算顺序
     coords_x = points[:,0] / points[:,2] * fx + cx
     coords_y = points[:,1] / points[:,2] * fy + cy
     coords = np.stack([coords_x, coords_y], axis=-1)
@@ -380,19 +385,13 @@ def batch_rgbdxyz_2_rgbxy_depth(points, camera):
 
 def framexy_depth_2_xyz(pixel_x, pixel_y, depth, camera):
     '''
-    **Input:**
-
-    - pixel_x: int of the pixel x coordinate.
-    
-    - pixel_y: int of the pixle y coordicate.
-    
-    - depth: float of depth. The unit is millimeter.
-    
-    - camera: string of type of camera. "realsense" or "kinect".
-    
-    **Output:**
-    
-    - x, y, z: float of x, y and z coordinates in camera frame. The unit is millimeter.
+    输入:
+        pixel_x: int，像素x坐标
+        pixel_y: int，像素y坐标
+        depth: float，深度值，单位为毫米
+        camera: 字符串，相机类型
+    输出:
+        x, y, z: float，点在相机坐标系下的三维坐标，单位为毫米
     '''
     intrinsics = get_camera_intrinsic(camera)
     fx, fy = intrinsics[0,0], intrinsics[1,1]
@@ -404,19 +403,13 @@ def framexy_depth_2_xyz(pixel_x, pixel_y, depth, camera):
 
 def batch_framexy_depth_2_xyz(pixel_x, pixel_y, depth, camera):
     '''
-    **Input:**
-
-    - pixel_x: numpy array of int of the pixel x coordinate. shape: (-1,)
-
-    - pixel_y: numpy array of int of the pixle y coordicate. shape: (-1,)
-
-    - depth: numpy array of float of depth. The unit is millimeter. shape: (-1,)
-
-    - camera: string of type of camera. "realsense" or "kinect".
-
-    **Output:**
-
-    x, y, z: numpy array of float of x, y and z coordinates in camera frame. The unit is millimeter.
+    输入:
+        pixel_x: numpy数组，像素x坐标，形状(-1,)
+        pixel_y: numpy数组，像素y坐标，形状(-1,)
+        depth: numpy数组，深度值，单位为毫米，形状(-1,)
+        camera: 字符串，相机类型
+    输出:
+        x, y, z: numpy数组，点在相机坐标系下的三维坐标，单位为毫米
     '''
     intrinsics = get_camera_intrinsic(camera)
     fx, fy = intrinsics[0,0], intrinsics[1,1]
@@ -428,17 +421,12 @@ def batch_framexy_depth_2_xyz(pixel_x, pixel_y, depth, camera):
 
 def key_point_2_rotation(center_xyz, open_point_xyz, upper_point_xyz):
     '''
-    **Input:**
-
-    - center_xyz: numpy array of the center point.
-
-    - open_point_xyz: numpy array of the open point.
-
-    - upper_point_xyz: numpy array of the upper point.
-
-    **Output:**
-
-    - rotation: numpy array of the rotation matrix.
+    输入:
+        center_xyz: numpy数组，中心点坐标
+        open_point_xyz: numpy数组，开口点坐标
+        upper_point_xyz: numpy数组，上方点坐标
+    输出:
+        rotation: numpy数组，旋转矩阵
     '''
     open_point_vector = open_point_xyz - center_xyz
     upper_point_vector = upper_point_xyz - center_xyz
@@ -453,17 +441,12 @@ def key_point_2_rotation(center_xyz, open_point_xyz, upper_point_xyz):
 
 def batch_key_point_2_rotation(centers_xyz, open_points_xyz, upper_points_xyz):
     '''
-    **Input:**
-
-    - centers_xyz: numpy array of the center points of shape (-1, 3).
-
-    - open_points_xyz: numpy array of the open points of shape (-1, 3).
-
-    - upper_points_xyz: numpy array of the upper points of shape (-1, 3).
-
-    **Output:**
-
-    - rotations: numpy array of the rotation matrix of shape (-1, 3, 3).
+    输入:
+        centers_xyz: numpy数组，中心点坐标，形状(-1, 3)
+        open_points_xyz: numpy数组，开口点坐标，形状(-1, 3)
+        upper_points_xyz: numpy数组，上方点坐标，形状(-1, 3)
+    输出:
+        rotations: numpy数组，旋转矩阵，形状(-1, 3, 3)
     '''
     open_points_vector = open_points_xyz - centers_xyz # (-1, 3)
     upper_points_vector = upper_points_xyz - centers_xyz # (-1, 3)
