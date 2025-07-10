@@ -14,7 +14,7 @@ setup(
     install_requires=[
         'numpy',
         'scipy',
-        'transforms3d==0.3.1',
+        'transforms3d==0.4.2',
         'open3d>=0.8.0.0',
         'tqdm',
         'opencv-python',
