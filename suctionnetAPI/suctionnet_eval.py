@@ -15,9 +15,9 @@ class SuctionNetEval(SuctionNet):
     SuctionNet数据集评估类。
 
     输入参数:
-    - root: 数据集根目录路径（字符串）
-    - camera: 相机类型（字符串）
-    - split: 数据集划分（字符串）
+    - root: 数据集根目录路径(字符串)
+    - camera: 相机类型(字符串)
+    - split: 数据集划分(字符串)
     '''
 
     def __init__(self, root, camera, split='all'):
@@ -28,12 +28,12 @@ class SuctionNetEval(SuctionNet):
         获取指定场景和标注下的所有物体点云模型及稠密点云。
 
         输入参数:
-        - scene_id: 场景编号（int）
-        - ann_id: 标注编号（int）
+        - scene_id: 场景编号(int)
+        - ann_id: 标注编号(int)
 
         输出:
         - model_list: 普通点云列表
-        - dense_model_list: 稠密点云列表（通过create_dense_point_cloud生成）
+        - dense_model_list: 稠密点云列表(通过create_dense_point_cloud生成)
         - obj_list: 物体编号列表
         '''
         model_dir = os.path.join(self.root, 'models')
@@ -64,8 +64,8 @@ class SuctionNetEval(SuctionNet):
         获取指定场景和标注下所有物体的位姿信息。
 
         输入参数:
-        - scene_id: 场景编号（int）
-        - ann_id: 标注编号（int）
+        - scene_id: 场景编号(int)
+        - ann_id: 标注编号(int)
 
         输出:
         - obj_list: 物体编号列表
@@ -94,9 +94,9 @@ class SuctionNetEval(SuctionNet):
         评估单个场景的吸取点准确率。
 
         输入参数:
-        - scene_id: 场景编号（int）
-        - split: 数据集划分（字符串）
-        - dump_folder: 吸取点预测结果保存目录（字符串）
+        - scene_id: 场景编号(int)
+        - split: 数据集划分(字符串)
+        - dump_folder: 吸取点预测结果保存目录(字符串)
 
         输出:
         - scene_accuracy: 形状为(256, 50, 6)的准确率张量
@@ -335,7 +335,7 @@ class SuctionNetEval(SuctionNet):
 
     def eval_all(self, dump_folder, proc=2):
         '''
-        评估所有测试集（seen、similar、novel）的场景。
+        评估所有测试集(seen、similar、novel)的场景。
 
         输入参数:
         - dump_folder: 预测结果保存目录
@@ -343,8 +343,8 @@ class SuctionNetEval(SuctionNet):
 
         输出:
         - res: 详细准确率数组
-        - ap_top50: 前50个吸取点的平均准确率（总/seen/similar/novel）
-        - ap_top1: 前1个吸取点的平均准确率（总/seen/similar/novel）
+        - ap_top50: 前50个吸取点的平均准确率(总/seen/similar/novel)
+        - ap_top1: 前1个吸取点的平均准确率(总/seen/similar/novel)
         '''
         res = np.array(self.parallel_eval_scenes(scene_ids=list(range(100, 190)), dump_folder=dump_folder, proc=proc))
         

@@ -2,7 +2,7 @@ import numpy as np
 from math import pi
 
 def rotation_matrix(alpha, beta, gamma):
-    # 根据欧拉角alpha、beta、gamma（弧度）生成旋转矩阵
+    # 根据欧拉角alpha、beta、gamma(弧度)生成旋转矩阵
     Rx = np.array([[1, 0, 0],
                    [0, np.cos(alpha), -np.sin(alpha)],
                    [0, np.sin(alpha), np.cos(alpha)]])
@@ -16,7 +16,7 @@ def rotation_matrix(alpha, beta, gamma):
     return R
 
 def matrix_to_dexnet_params(matrix):
-    # 将旋转矩阵转换为Dex-Net抓取参数（binormal和旋转角度）
+    # 将旋转矩阵转换为Dex-Net抓取参数(binormal和旋转角度)
     approach = matrix[:, 0]
     binormal = matrix[:, 1]
     axis_y = binormal
@@ -97,7 +97,7 @@ def batch_viewpoint_to_matrix(batch_towards):
     return R.astype(np.float32)
 
 def dexnet_params_to_matrix(binormal, angle):
-    # 根据Dex-Net参数（binormal和角度）生成旋转矩阵
+    # 根据Dex-Net参数(binormal和角度)生成旋转矩阵
     axis_y = binormal
     axis_x = np.array([axis_y[1], -axis_y[0], 0])
     if np.linalg.norm(axis_x) == 0:

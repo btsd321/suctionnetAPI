@@ -14,14 +14,14 @@ from .pose import pose_list_from_pose_vector_list
 
 class xmlWriter():
     def __init__(self, topfromreader=None):
-        # 初始化xmlWriter对象，可选传入已有的XML根节点
+        # 初始化xmlWriter对象, 可选传入已有的XML根节点
         self.topfromreader = topfromreader
         self.poselist = []
         self.objnamelist = []
         self.objpathlist = []
         self.objidlist = []
     def addobject(self, pose, objname, objpath, objid):
-        # 添加一个物体的信息，包括位姿、名称、路径和id
+        # 添加一个物体的信息, 包括位姿、名称、路径和id
         # pose为4x4位姿矩阵
         self.poselist.append(pose)
         self.objnamelist.append(objname)
@@ -29,7 +29,7 @@ class xmlWriter():
         self.objidlist.append(objid)
 
     def objectlistfromposevectorlist(self, posevectorlist, objdir, objnamelist, objidlist):
-        # 根据位姿向量列表和物体信息，批量添加物体
+        # 根据位姿向量列表和物体信息, 批量添加物体
         self.poselist = []
         self.objnamelist = []
         self.objidlist = []
@@ -79,7 +79,7 @@ class xmlWriter():
 
 class xmlReader():
     def __init__(self, xmlfilename):
-        # 初始化xmlReader对象，读取指定XML文件
+        # 初始化xmlReader对象, 读取指定XML文件
         self.xmlfilename = xmlfilename
         etree = ET.parse(self.xmlfilename)
         self.top = etree.getroot()
@@ -95,7 +95,7 @@ class xmlReader():
         return self.top
 
     def getposevectorlist(self):
-        # 解析XML，返回所有物体的位姿向量列表
+        # 解析XML, 返回所有物体的位姿向量列表
         # 位姿向量格式: [objectid, x, y, z, alpha, beta, gamma]
         posevectorlist = []
         for i in range(len(self.top)):
@@ -126,7 +126,7 @@ class xmlReader():
 def empty_pose_vector(objectid):
     # 生成一个指定物体id的默认位姿向量
     # [object id, x, y, z, alpha, beta, gamma]
-    # alpha, beta, gamma为欧拉角（角度制）
+    # alpha, beta, gamma为欧拉角(角度制)
     return [objectid, 0.0, 0.0, 0.4, 0.0, 0.0, 0.0]
 
 def empty_pose_vector_list(objectidlist):
@@ -137,7 +137,7 @@ def empty_pose_vector_list(objectidlist):
     return pose_vector_list
 
 def getposevectorlist(objectidlist, is_resume, num_frame, frame_number, xml_dir):
-    # 根据是否恢复和文件存在性，获取指定帧的物体位姿向量列表
+    # 根据是否恢复和文件存在性, 获取指定帧的物体位姿向量列表
     if not is_resume or (not os.path.exists(os.path.join(xml_dir, '%04d.xml' % num_frame))):
         print('log:create empty pose vector list')
         return empty_pose_vector_list(objectidlist)
@@ -157,7 +157,7 @@ def getposevectorlist(objectidlist, is_resume, num_frame, frame_number, xml_dir)
         return posevectorlist
 
 def getframeposevectorlist(objectidlist, is_resume, frame_number, xml_dir):
-    # 获取所有帧的物体位姿向量列表（每帧一个列表）
+    # 获取所有帧的物体位姿向量列表(每帧一个列表)
     frameposevectorlist = []
     for num_frame in range(frame_number):
         if not is_resume or (not os.path.exists(os.path.join(xml_dir,'%04d.xml' % num_frame))):

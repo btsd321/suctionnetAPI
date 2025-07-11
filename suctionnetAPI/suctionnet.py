@@ -7,18 +7,18 @@ __version__ = '1.0'
 # SuctionNet-1Billion数据集的访问接口。
 # 说明及部分代码修改自MSCOCO api
 
-# SuctionNet是一个面向通用物体吸取抓取的开放项目，持续丰富中。
-# 当前发布了SuctionNet-1Billion，这是一个大规模的通用物体吸取抓取基准数据集，
-# 也适用于其他相关领域（如6D位姿估计、未知物体分割等）。
-# suctionnetapi是一个Python API，辅助加载、解析和可视化SuctionNet中的标注信息。
-# 更多关于SuctionNet的数据、论文和教程，请访问 https://graspnet.net/。
+# SuctionNet是一个面向通用物体吸取抓取的开放项目, 持续丰富中。
+# 当前发布了SuctionNet-1Billion, 这是一个大规模的通用物体吸取抓取基准数据集, 
+# 也适用于其他相关领域(如6D位姿估计、未知物体分割等)。
+# suctionnetapi是一个Python API, 辅助加载、解析和可视化SuctionNet中的标注信息。
+# 更多关于SuctionNet的数据、论文和教程, 请访问 https://graspnet.net/。
 # 标注的具体格式也在官网有详细说明。suctionnetapi_demo.ipynb中有API的使用示例。
-# 除了本API外，也可以直接将标注文件加载为Python字典。
+# 除了本API外, 也可以直接将标注文件加载为Python字典。
 # 使用API可获得更多实用功能。注意本API同时支持*吸取抓取*和*6D位姿*标注。
-# 对于6D位姿，部分函数未定义（如碰撞相关）。
+# 对于6D位姿, 部分函数未定义(如碰撞相关)。
 
 # 本API定义了如下主要函数：
-#  SuctionNet             - SuctionNet主类，加载SuctionNet标注文件并准备数据结构。
+#  SuctionNet             - SuctionNet主类, 加载SuctionNet标注文件并准备数据结构。
 #  getSceneIds            - 获取满足条件的场景ID列表。
 #  getObjIds              - 获取满足条件的物体ID列表。
 #  getDataIds             - 获取满足条件的数据ID列表。
@@ -30,13 +30,13 @@ __version__ = '1.0'
 #  showObjSuction         - 可视化指定物体ID的吸取姿态。
 #  showSceneCollision     - 可视化指定场景ID的碰撞标签。
 #  showSceneWrench        - 可视化指定场景ID的抗扭矩标签。
-#  show6DPose             - 可视化指定场景ID的6D位姿，将物体模型投影到点云上。
-# 在API中，"ann"=annotation（标注），"obj"=object（物体），"img"=image（图像）。
+#  show6DPose             - 可视化指定场景ID的6D位姿, 将物体模型投影到点云上。
+# 在API中, "ann"=annotation(标注), "obj"=object(物体), "img"=image(图像)。
 
-# SuctionNet工具箱，版本1.0
+# SuctionNet工具箱, 版本1.0
 # 数据、论文和教程请见：https://graspnet.net/
-# 代码作者：Hanwen Cao，2021年。
-# 仅限非商业用途，遵循CC4.0协议 [见 https://graspnet.net/about]
+# 代码作者：Hanwen Cao, 2021年。
+# 仅限非商业用途, 遵循CC4.0协议 [见 https://graspnet.net/about]
 
 import os
 import numpy as np
@@ -55,7 +55,7 @@ from .utils.rotation import viewpoint_to_matrix
 TOTAL_SCENE_NUM = 190
 
 def _isArrayLike(obj):
-    # 判断对象是否为可迭代且有长度（如list、numpy数组等）
+    # 判断对象是否为可迭代且有长度(如list、numpy数组等)
     return hasattr(obj, '__iter__') and hasattr(obj, '__len__')
 
 class SuctionNet():
@@ -63,13 +63,13 @@ class SuctionNet():
     suctionnetAPI主类。
 
     输入参数:
-    - root: 数据集根目录（字符串）
-    - camera: 相机类型（字符串），可选"kinect"或"realsense"
-    - split: 数据集划分（字符串），可选"all"、"train"、"test"、"test_seen"、"test_similar"、"test_novel"
+    - root: 数据集根目录(字符串)
+    - camera: 相机类型(字符串), 可选"kinect"或"realsense"
+    - split: 数据集划分(字符串), 可选"all"、"train"、"test"、"test_seen"、"test_similar"、"test_novel"
     '''
 
     def __init__(self, root, camera='kinect', split='all'):
-        # 初始化SuctionNet对象，加载数据路径和基本信息
+        # 初始化SuctionNet对象, 加载数据路径和基本信息
         assert camera in ['kinect', 'realsense'], 'camera应为kinect或realsense'
         assert split in ['all', 'train', 'test', 'test_seen', 'test_similar', 'test_novel'], 'split应为all/train/test/test_seen/test_similar/test_novel'
         self.root = root
@@ -124,7 +124,7 @@ class SuctionNet():
         检查数据集文件是否完整。
 
         输出:
-        - bool类型，True表示完整，False表示有缺失
+        - bool类型, True表示完整, False表示有缺失
         '''
         error_flag = False
         # 检查模型文件
@@ -202,7 +202,7 @@ class SuctionNet():
         获取包含指定物体ID的所有场景ID。
 
         输入参数:
-        - objIds: int或int列表，物体ID
+        - objIds: int或int列表, 物体ID
 
         输出:
         - 包含所有指定物体的场景ID列表
@@ -225,7 +225,7 @@ class SuctionNet():
         获取指定场景ID中的所有物体ID。
 
         输入参数:
-        - sceneIds: int或int列表，场景ID
+        - sceneIds: int或int列表, 场景ID
 
         输出:
         - 物体ID列表
@@ -246,7 +246,7 @@ class SuctionNet():
         获取指定场景ID对应的数据ID。
 
         输入参数:
-        - sceneIds: int或int列表，场景ID
+        - sceneIds: int或int列表, 场景ID
 
         输出:
         - 数据ID列表。可通过self.loadData(ids)访问数据。
@@ -266,7 +266,7 @@ class SuctionNet():
         加载指定物体ID的三维点云模型。
 
         输入参数:
-        - objIds: int或int列表，物体ID
+        - objIds: int或int列表, 物体ID
 
         输出:
         - open3d.geometry.PointCloud对象列表
@@ -285,7 +285,7 @@ class SuctionNet():
         加载指定物体ID的三维Trimesh模型。
 
         输入参数:
-        - objIds: int或int列表，物体ID
+        - objIds: int或int列表, 物体ID
 
         输出:
         - trimesh.Trimesh对象列表
@@ -304,10 +304,10 @@ class SuctionNet():
         加载指定物体ID的密封标签。
 
         输入参数:
-        - objIds: int或int列表，物体ID
+        - objIds: int或int列表, 物体ID
 
         输出:
-        - 每个物体的密封标签字典（points, normals, scores）
+        - 每个物体的密封标签字典(points, normals, scores)
         '''
         objIds = self.objIds if objIds is None else objIds
         assert _isArrayLike(objIds) or isinstance(objIds, int), 'objIds必须为整数或整数列表/numpy数组'
@@ -323,7 +323,7 @@ class SuctionNet():
         加载指定场景ID的抗扭矩标签。
 
         输入参数:
-        - sceneIds: int或int列表，场景ID
+        - sceneIds: int或int列表, 场景ID
 
         输出:
         - wrench标签字典
@@ -345,7 +345,7 @@ class SuctionNet():
         加载指定场景ID的碰撞标签。
 
         输入参数:
-        - sceneIds: int或int列表，场景ID
+        - sceneIds: int或int列表, 场景ID
 
         输出:
         - 碰撞标签字典
@@ -364,7 +364,7 @@ class SuctionNet():
 
     def loadRGB(self, sceneId, camera, annId):
         '''
-        加载指定场景、相机和标注ID的RGB图像（RGB顺序）。
+        加载指定场景、相机和标注ID的RGB图像(RGB顺序)。
 
         输入参数:
         - sceneId: 场景编号
@@ -372,13 +372,13 @@ class SuctionNet():
         - annId: 标注编号
 
         输出:
-        - numpy数组，RGB顺序
+        - numpy数组, RGB顺序
         '''
         return cv2.cvtColor(cv2.imread(os.path.join(self.root, 'scenes', 'scene_%04d' % sceneId, camera, 'rgb', '%04d.png' % annId)), cv2.COLOR_BGR2RGB)
 
     def loadBGR(self, sceneId, camera, annId):
         '''
-        加载指定场景、相机和标注ID的RGB图像（BGR顺序）。
+        加载指定场景、相机和标注ID的RGB图像(BGR顺序)。
 
         输入参数:
         - sceneId: 场景编号
@@ -386,7 +386,7 @@ class SuctionNet():
         - annId: 标注编号
 
         输出:
-        - numpy数组，BGR顺序
+        - numpy数组, BGR顺序
         '''
         return cv2.imread(os.path.join(self.root, 'scenes', 'scene_%04d' % sceneId, camera, 'rgb', '%04d.png' % annId))
 
@@ -400,7 +400,7 @@ class SuctionNet():
         - annId: 标注编号
 
         输出:
-        - numpy数组，类型为np.uint16
+        - numpy数组, 类型为np.uint16
         '''
         return cv2.imread(os.path.join(self.root, 'scenes', 'scene_%04d' % sceneId, camera, 'depth', '%04d.png' % annId), cv2.IMREAD_UNCHANGED)
  
@@ -414,13 +414,13 @@ class SuctionNet():
         - annId: 标注编号
 
         输出:
-        - numpy数组，类型为np.uint16
+        - numpy数组, 类型为np.uint16
         '''
         return cv2.imread(os.path.join(self.root, 'scenes', 'scene_%04d' % sceneId, camera, 'label', '%04d.png' % annId), cv2.IMREAD_UNCHANGED)
    
     def loadWorkSpace(self, sceneId, camera, annId):
         '''
-        获取当前帧的工作空间边界框（mask非零区域的边界）。
+        获取当前帧的工作空间边界框(mask非零区域的边界)。
 
         输入参数:
         - sceneId: 场景编号
@@ -428,7 +428,7 @@ class SuctionNet():
         - annId: 标注编号
 
         输出:
-        - (x1, y1, x2, y2)四元组，表示工作空间的左上和右下角坐标
+        - (x1, y1, x2, y2)四元组, 表示工作空间的左上和右下角坐标
         '''
         mask = self.loadMask(sceneId, camera, annId)
         maskx = np.any(mask, axis=0)
@@ -448,7 +448,7 @@ class SuctionNet():
         - camera: 相机类型
         - annId: 标注编号
         - align: 是否对齐到桌面坐标系
-        - format: 返回格式，'open3d'或'numpy'
+        - format: 返回格式, 'open3d'或'numpy'
 
         输出:
         - open3d.geometry.PointCloud对象或(numpy点坐标, numpy颜色)元组
@@ -491,7 +491,7 @@ class SuctionNet():
 
     def loadSceneModel(self, sceneId, camera = 'kinect', annId = 0, align = False):
         '''
-        加载指定场景、相机和标注ID下的所有物体模型（点云）。
+        加载指定场景、相机和标注ID下的所有物体模型(点云)。
 
         输入参数:
         - sceneId: 场景编号
@@ -535,12 +535,12 @@ class SuctionNet():
         加载指定数据ID的数据路径。
 
         输入参数:
-        - ids: int或int列表，数据ID
+        - ids: int或int列表, 数据ID
         - extargs: 额外参数。也可通过loadData(sceneId, camera, annId)方式调用
 
         输出:
-        - 若ids为int，返回单个数据路径元组
-        - 若ids为None或列表，返回数据路径列表元组
+        - 若ids为int, 返回单个数据路径元组
+        - 若ids为None或列表, 返回数据路径列表元组
         '''
         if ids is None:
             return (self.rgbPath, self.depthPath, self.segLabelPath, self.metaPath, self.sceneName, self.annId)
@@ -574,7 +574,7 @@ class SuctionNet():
         - visu_num: 可视化的吸取点数量
 
         输出:
-        - 无返回值，弹出3D可视化窗口
+        - 无返回值, 弹出3D可视化窗口
         '''
         ply_dir = os.path.join(self.root, 'models', '%03d' % obj_id, 'nontextured.ply')
         model = o3d.io.read_point_cloud(ply_dir)
@@ -617,7 +617,7 @@ class SuctionNet():
         - visu_num_each: 每个物体可视化的吸取点数量
 
         输出:
-        - 无返回值，弹出3D可视化窗口
+        - 无返回值, 弹出3D可视化窗口
         '''
         scene_name = 'scene_%04d' % scene_idx
         model_list, obj_list, pose_list = generate_scene_model(self.root, scene_name, anno_idx, return_poses=True, camera=camera, align=True)
@@ -675,7 +675,7 @@ class SuctionNet():
         - visu_num_each: 每个物体可视化的吸取点数量
 
         输出:
-        - 无返回值，弹出3D可视化窗口
+        - 无返回值, 弹出3D可视化窗口
         '''
         radius = 0.002
         height = 0.05
@@ -731,7 +731,7 @@ class SuctionNet():
 
     def show6DPose(self, scene_idx, anno_idx, camera):
         '''
-        可视化指定场景的6D位姿（将物体模型投影到点云上）。
+        可视化指定场景的6D位姿(将物体模型投影到点云上)。
 
         输入参数:
         - scene_idx: 场景编号
@@ -739,7 +739,7 @@ class SuctionNet():
         - camera: 相机类型
 
         输出:
-        - 无返回值，弹出3D可视化窗口
+        - 无返回值, 弹出3D可视化窗口
         '''
         scene_name = 'scene_%04d' % scene_idx
         model_list, _, _ = generate_scene_model(self.root, scene_name, anno_idx, return_poses=True, camera=camera, align=True)
