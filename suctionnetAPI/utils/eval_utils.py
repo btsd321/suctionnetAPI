@@ -14,7 +14,7 @@ def get_scene_name(num):
     return ('scene_%04d' % (num,))
 
 def create_table_points(lx, ly, lz, dx=0, dy=0, dz=0, grid_size=0.01):
-    # 创建桌面点云，lx/ly/lz为长宽高，dx/dy/dz为偏移，grid_size为采样间隔
+    # 创建桌面点云, lx/ly/lz为长宽高, dx/dy/dz为偏移, grid_size为采样间隔
     xmap = np.linspace(0, lx, int(lx/grid_size))
     ymap = np.linspace(0, ly, int(ly/grid_size))
     zmap = np.linspace(0, lz, int(lz/grid_size))
@@ -95,7 +95,7 @@ def topk_suctions(suctions, k=10):
     '''
     输入:
         suctions: (N, 17) 吸取点信息
-        k: int，保留前k个
+        k: int, 保留前k个
     输出:
         topk_suctions: (k, 17) 置信度最高的k个吸取点
     '''
@@ -247,11 +247,11 @@ def get_wrench_score(suction_point, direction, center, g_direction):
 def collision_detection(suction_list, model_list, scene_points, outlier=0.1):
     '''
     输入:
-        suction_list: [(k1,17), (k2,17), ..., (kn,17)]，每个物体的吸取点（相机坐标系下）
-        model_list: [(N1, 3), (N2, 3), ..., (Nn, 3)]，每个物体的点云（相机坐标系下）
-        scene_points: (Ns, 3) 场景点云（相机坐标系下）
+        suction_list: [(k1,17), (k2,17), ..., (kn,17)], 每个物体的吸取点(相机坐标系下)
+        model_list: [(N1, 3), (N2, 3), ..., (Nn, 3)], 每个物体的点云(相机坐标系下)
+        scene_points: (Ns, 3) 场景点云(相机坐标系下)
     输出:
-        collsion_mask_list: [(k1,), (k2,), ..., (kn,)]，每个吸取点是否碰撞的布尔掩码
+        collsion_mask_list: [(k1,), (k2,), ..., (kn,)], 每个吸取点是否碰撞的布尔掩码
     '''
     height = 0.1
     radius = 0.01
@@ -271,7 +271,7 @@ def collision_detection(suction_list, model_list, scene_points, outlier=0.1):
         suction_points = suctions[:, 4:7]
         suction_directions = suctions[:, 1:4]
         
-        # 裁剪场景点，去除离物体较远的点
+        # 裁剪场景点, 去除离物体较远的点
         xmin, xmax = model[:,0].min(), model[:,0].max()
         ymin, ymax = model[:,1].min(), model[:,1].max()
         zmin, zmax = model[:,2].min(), model[:,2].max()
@@ -297,10 +297,10 @@ def collision_detection(suction_list, model_list, scene_points, outlier=0.1):
 
 def eval_suction(suction_group, models, dense_models, poses, align_mat, camera_pose, table=None):
     '''
-        对吸取点进行评估，返回每个物体的吸取点、平滑度分数、抗扭分数和碰撞掩码
-        models: 物体点云（模型坐标系）
+        对吸取点进行评估, 返回每个物体的吸取点、平滑度分数、抗扭分数和碰撞掩码
+        models: 物体点云(模型坐标系)
         poses: 物体到相机的变换
-        table: 桌面点云（相机坐标系），可选
+        table: 桌面点云(相机坐标系), 可选
     '''
     num_models = len(models)
     ## 吸取点非极大值抑制

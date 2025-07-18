@@ -15,7 +15,7 @@ class Suction():
     def __init__(self, *args):
         '''
         输入参数:
-        - args 可以是一个numpy数组，或(score, direction, translation, object_id)四元组
+        - args 可以是一个numpy数组, 或(score, direction, translation, object_id)四元组
         - numpy数组格式为[score, direction(3), translation(3), object_id]
         - numpy数组长度为8
         '''
@@ -23,7 +23,7 @@ class Suction():
             if type(args[0]) == np.ndarray:
                 self.suction_array = copy.deepcopy(args[0])
             else:
-                raise TypeError('如果只传入一个参数，则必须为np.ndarray类型。')
+                raise TypeError('如果只传入一个参数, 则必须为np.ndarray类型。')
         elif len(args) == 4:
             score, direction, translation, object_id = args
             self.suction_array = np.concatenate([np.array((score)),direction, translation, np.array((object_id)).reshape(-1)]).astype(np.float32)
@@ -31,7 +31,7 @@ class Suction():
             raise ValueError('只接受1个或4个参数')
     
     def __repr__(self):
-        # 返回吸取点的字符串描述，便于打印和调试
+        # 返回吸取点的字符串描述, 便于打印和调试
         return 'Suction: score:{}, translation:{}\ndirection:\n{}\nobject id:{}'.format(self.score(), self.translation(), self.direction(), self.object_id())
 
     def score(self):
@@ -44,14 +44,14 @@ class Suction():
     def direction(self):
         '''
         输出:
-        - 吸取点的方向，np.array，形状为(3,)，表示旋转向量
+        - 吸取点的方向, np.array, 形状为(3,), 表示旋转向量
         '''
         return self.suction_array[1:4]
 
     def translation(self):
         '''
         输出:
-        - 吸取点的平移向量，np.array，形状为(3,)
+        - 吸取点的平移向量, np.array, 形状为(3,)
         '''
         return self.suction_array[4:7]
 
@@ -65,7 +65,7 @@ class Suction():
     def to_open3d_geometry(self):
         '''
         输出:
-        - 返回open3d几何体列表，用于可视化吸盘
+        - 返回open3d几何体列表, 用于可视化吸盘
         '''
         return plot_sucker(R=self.direction(), t=self.translation(), score=self.score())
 
@@ -73,7 +73,7 @@ class SuctionGroup():
     def __init__(self, *args):
         '''
         输入参数:
-        - 可不传参数，或传入一个吸取点组的numpy数组
+        - 可不传参数, 或传入一个吸取点组的numpy数组
         '''
         if len(args) == 0:
             self.suction_group_array = np.zeros((0, SUCTION_ARRAY_LEN), dtype=np.float32)
@@ -90,7 +90,7 @@ class SuctionGroup():
         return len(self.suction_group_array)
 
     def __repr__(self):
-        # 返回吸取点组的字符串描述，便于打印和调试
+        # 返回吸取点组的字符串描述, 便于打印和调试
         repr = '----------\nSuction Group, Number={}:\n'.format(self.__len__())
         if self.__len__() <= 6:
             for suction_array in self.suction_group_array:
@@ -108,8 +108,8 @@ class SuctionGroup():
         输入:
         - index: int 或 slice类型
         输出:
-        - 若index为int，返回对应的Suction实例
-        - 若index为slice，返回对应的SuctionGroup实例
+        - 若index为int, 返回对应的Suction实例
+        - 若index为slice, 返回对应的SuctionGroup实例
         '''
         if type(index) == int:
             return Suction(self.suction_group_array[index])
@@ -118,33 +118,33 @@ class SuctionGroup():
             suctiongroup.suction_group_array = copy.deepcopy(self.suction_group_array[index])
             return suctiongroup
         else:
-            raise TypeError('SuctionGroup的__getitem__只支持int或slice类型，当前类型为{}'.format(type(index)))
+            raise TypeError('SuctionGroup的__getitem__只支持int或slice类型, 当前类型为{}'.format(type(index)))
 
     def scores(self):
         '''
         输出:
-        - 返回所有吸取点的分数，numpy数组，形状为(-1,)
+        - 返回所有吸取点的分数, numpy数组, 形状为(-1,)
         '''
         return self.suction_group_array[:,0]
 
     def directions(self):
         '''
         输出:
-        - 返回所有吸取点的方向，numpy数组，形状为(-1, 3)
+        - 返回所有吸取点的方向, numpy数组, 形状为(-1, 3)
         '''
         return self.suction_group_array[:, 1:4]
 
     def translations(self):
         '''
         输出:
-        - 返回所有吸取点的平移向量，numpy数组，形状为(-1, 3)
+        - 返回所有吸取点的平移向量, numpy数组, 形状为(-1, 3)
         '''
         return self.suction_group_array[:, 4:7]
 
     def object_ids(self):
         '''
         输出:
-        - 返回所有吸取点所属物体的id，numpy数组，形状为(-1,)
+        - 返回所有吸取点所属物体的id, numpy数组, 形状为(-1,)
         '''
         return self.suction_group_array[:,7].astype(np.int32)
 
@@ -193,7 +193,7 @@ class SuctionGroup():
     def to_open3d_geometry_list(self):
         '''
         输出:
-        - 返回所有吸取点的open3d几何体列表，用于可视化
+        - 返回所有吸取点的open3d几何体列表, 用于可视化
         '''
         geometry = []
         for i in range(len(self.suction_group_array)):
@@ -204,7 +204,7 @@ class SuctionGroup():
     def sort_by_score(self, reverse = False):
         '''
         输入:
-        - reverse: 排序方式，True为从低到高，False为从高到低
+        - reverse: 排序方式, True为从低到高, False为从高到低
         功能:
         - 按照分数对吸取点组排序
         '''
@@ -234,9 +234,9 @@ class SuctionGroup():
         '''
         输入:
         - translation_thresh: 平移阈值(float)
-        - rotation_thresh: 旋转阈值(float，弧度)
+        - rotation_thresh: 旋转阈值(float, 弧度)
         输出:
-        - 返回经过非极大值抑制（NMS）后的SuctionGroup实例
+        - 返回经过非极大值抑制(NMS)后的SuctionGroup实例
         '''
         from suction_nms import nms_suction
         return SuctionGroup(nms_suction(self.suction_group_array, translation_thresh, rotation_thresh))
